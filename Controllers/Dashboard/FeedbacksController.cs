@@ -52,10 +52,11 @@ namespace GoWork.Controllers.Dashboard
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<PaginatedResult<FeedbackResponseDTO>>>> GetFeedbacks(
             [FromQuery] int? feedbackTypeId,
+            [FromQuery] bool? isRead,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
         {
-            var response = await _feedbackService.GetAllFeedbacksAsync(feedbackTypeId, pageNumber, pageSize);
+            var response = await _feedbackService.GetAllFeedbacksAsync(feedbackTypeId, isRead, pageNumber, pageSize);
             return Ok(response);
         }
 
