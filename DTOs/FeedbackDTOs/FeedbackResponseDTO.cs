@@ -9,6 +9,7 @@ namespace GoWork.DTOs.FeedbackDTOs
         public string ReviewerName { get; set; } = null!;
         public string ReviewerEmail { get; set; } = null!;
 
+        public string ReviewerType { get; set; } = null!;
         public string? LogoUrl { get; set; }
         public string FeedbackTypeName { get; set; } = null!;
         public string Message { get; set; } = null!;
