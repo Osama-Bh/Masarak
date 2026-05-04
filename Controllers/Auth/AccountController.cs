@@ -154,8 +154,8 @@ namespace GoWork.Controllers.Auth
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                //Path = "/",
-                //Domain = ".masarak.app"
+                Path = "/",
+                Domain = ".masarak.app"
             });
             return Ok(response);
         }
@@ -518,8 +518,8 @@ namespace GoWork.Controllers.Auth
                     Secure = true,
                     SameSite = SameSiteMode.None,
                     Expires = DateTime.UtcNow.AddDays(7),
-                    //Path = "/",
-                    //Domain = ".masarak.app"
+                    Path = "/",
+                    Domain = ".masarak.app"
                 });
 
                 return Ok(response);
@@ -582,8 +582,8 @@ namespace GoWork.Controllers.Auth
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                //Path = "/",
-                // Domain = ".masarak.app"
+                Path = "/",
+                Domain = ".masarak.app"
             });
 
             return Ok("Logout Successfully");
