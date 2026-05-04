@@ -18,6 +18,9 @@ namespace GoWork.Models
         public Address Address { get; set; } = null!;
         [StringLength(200, ErrorMessage = "Notes cannot exceed 100 characters.")]
         public string? Notes { get; set; }
+        [StringLength(500, ErrorMessage = "Meeting link cannot exceed 500 characters.")]
+        public string? MeetingLink { get; set; }
+        public DateTime? RespondedAt { get; set; }
         public int InterviewStatusId { get; set; }
         public InterviewStatus InterviewStatus { get; set; }
 

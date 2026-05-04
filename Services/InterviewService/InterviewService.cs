@@ -17,6 +17,115 @@ namespace GoWork.Services.InterviewService
             _context = context;
         }
 
+        public async Task<ApiResponse<ConfirmationResponseDTO>> HandleInterviewActionAsync(int interviewId, int userId, InterviewActionDTO dto)
+        {
+            // Resolve seeker from userId
+            var seeker = await _context.TbSeekers
+                .FirstOrDefaultAsync(s => s.UserId == userId);
+
+            if (seeker == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "seeker not found");
+
+            // Validate action value
+            var action = dto.Action?.Trim();
+            if (!string.Equals(action, "Accept", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(action, "Cancel", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid action. Use 'Accept' or 'Cancel'.");
+            }
+
+            // Find interview and verify ownership through Application → Seeker
+            var interview = await _context.TbInterviews
+                .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.SeekerId == seeker.Id);
+
+            if (interview == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
+
+            // Enforce: only Scheduled interviews can be acted upon
+            if (interview.InterviewStatusId != (int)Enums.InterviewStatusEnum.Scheduled)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Interview can only be accepted or cancelled when in Scheduled status.");
+
+            // Map action to status
+            interview.InterviewStatusId = string.Equals(action, "Accept", StringComparison.OrdinalIgnoreCase)
+                ? (int)Enums.InterviewStatusEnum.Confirmed
+                : (int)Enums.InterviewStatusEnum.Cancelled;
+
+            interview.RespondedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var message = string.Equals(action, "Accept", StringComparison.OrdinalIgnoreCase)
+                ? "Interview confirmed successfully."
+                : "Interview cancelled successfully.";
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = message });
+        }
+
+        public async Task<ApiResponse<InterviewResponseDTO>> GetCandidateInterviews(InterviewRequestDTO requestDTO)
+        {
+            if (!requestDTO.UserId.HasValue)
+                return new ApiResponse<InterviewResponseDTO>(401, "unauthorized user");
+
+            // Single async query for the seeker
+            var seeker = await _context.TbSeekers
+                .FirstOrDefaultAsync(s => s.UserId == requestDTO.UserId.Value);
+
+            if (seeker == null)
+                return new ApiResponse<InterviewResponseDTO>(404, "seeker not found");
+
+            // Build base query: interviews whose application belongs to the seeker
+            var baseQuery = _context.TbInterviews
+                .Where(i => i.Application.SeekerId == seeker.Id);
+
+            // Apply optional status filter
+            if (requestDTO.InterviewStatusId.HasValue)
+            {
+                baseQuery = baseQuery.Where(i => i.InterviewStatusId == requestDTO.InterviewStatusId.Value);
+            }
+
+            // Apply sorting (default: newest first)
+            baseQuery = string.Equals(requestDTO.SortOrder, "asc", StringComparison.OrdinalIgnoreCase)
+                ? baseQuery.OrderBy(i => i.InterviewDate)
+                : baseQuery.OrderByDescending(i => i.InterviewDate);
+
+            // Count BEFORE pagination
+            var totalCount = await baseQuery.CountAsync();
+
+            // Apply pagination
+            var pagedInterviews = await baseQuery
+                .Skip((requestDTO.Page - 1) * requestDTO.PageSize)
+                .Take(requestDTO.PageSize)
+                .Select(i => new InterviewDTO
+                {
+                    Id = i.Id,
+                    JobTitle = i.Application.Job.Title,
+                    CompanyName = i.Application.Job.Employer.ComapnyName,
+                    InterviewDate = i.InterviewDate,
+                    InterviewType = i.InterviewType.Name,
+                    Location = i.Address != null
+                        ? $"{i.Address.AddressLine1}, {i.Address.Governate.Name}, {i.Address.Country.Name}"
+                        : null,
+                    MeetingLink = i.MeetingLink ?? (i.InterviewTypeId != (int)Enums.InterviewTypeEnum.InPerson
+                        ? "Meeting link not provided yet"
+                        : null),
+                    Notes = i.Notes,
+                    Status = i.InterviewStatus.Name
+                })
+                .ToListAsync();
+
+            var totalPages = (int)Math.Ceiling((double)totalCount / requestDTO.PageSize);
+
+            return new ApiResponse<InterviewResponseDTO>(200, new InterviewResponseDTO
+            {
+                Interviews = pagedInterviews,
+                PageNumber = requestDTO.Page,
+                PageSize = requestDTO.PageSize,
+                TotalCount = totalCount,
+                TotalPages = totalPages,
+                HasNextPage = requestDTO.Page < totalPages
+            });
+        }
+
         public async Task<ApiResponse<InterviewStatisticsDTO>> GetInterviewStatisticsAsync(int employerUserId)
         {
             var employer = await _context.TbEmployers

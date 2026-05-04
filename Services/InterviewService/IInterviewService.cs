@@ -22,5 +22,9 @@ namespace GoWork.Services.InterviewService
             int employerUserId, int interviewId, RescheduleInterviewDTO dto);
 
         Task<ApiResponse<List<LookUpDTO>>> GetInterviewStatusesAsync();
+
+        Task<ApiResponse<InterviewResponseDTO>> GetCandidateInterviews(InterviewRequestDTO requestDTO);
+        Task<ApiResponse<ConfirmationResponseDTO>> HandleInterviewActionAsync(int interviewId, int userId, InterviewActionDTO dto);
+
     }
 }

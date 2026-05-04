@@ -21,6 +21,46 @@ namespace GoWork.Controllers.Dashboard
             _interviewService = interviewService;
         }
 
+        [HttpPost("{id}/action")]
+        [Authorize(Roles = "Candidate, Admin")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> HandleInterviewAction(int id, InterviewActionDTO dto)
+        {
+            var claims = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (claims == null || !int.TryParse(claims.Value, out int userId))
+            {
+                return Unauthorized("Unauthorized: User not found.");
+            }
+
+            var response = await _interviewService.HandleInterviewActionAsync(id, userId, dto);
+            if (response.StatusCode != 200)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Candidate, Admin")]
+        public async Task<ActionResult<ApiResponse<InterviewResponseDTO>>> GetCandidateInterviews([FromQuery] InterviewRequestDTO requestDTO)
+        {
+            var claims = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (claims == null || !int.TryParse(claims.Value, out int id))
+            {
+                return Unauthorized("Unauthorized: User not found.");
+            }
+
+            requestDTO.UserId = id;
+
+            var response = await _interviewService.GetCandidateInterviews(requestDTO);
+            if (response.StatusCode != 200)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+
+            return Ok(response);
+        }
+
         /// <summary>
         /// Get interview statistics for dashboard stats cards.
         /// </summary>
