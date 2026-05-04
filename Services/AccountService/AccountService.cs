@@ -1408,78 +1408,174 @@ namespace GoWork.Service.AccountService
             }
         }
 
+        //public async Task<ApiResponse<ConfirmationResponseDTO>> DeleteAccountAsync(int userId)
+        //{
+
+        //    var user = await _context.Users
+        //        .FirstOrDefaultAsync(u => u.Id == userId);
+
+        //    if (user == null)
+        //        return new ApiResponse<ConfirmationResponseDTO>(404, new ConfirmationResponseDTO
+        //        {
+        //            Message = "User Not Found"
+        //        });
+
+        //    var roles = await _userManager.GetRolesAsync(user);
+        //    var role = roles.FirstOrDefault() ?? "Unknown";
+
+        //    if(role == "Company")
+        //    {
+        //        var employer = await _context.TbEmployers
+        //        .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        //        if (employer != null)
+        //            _context.TbEmployers.Remove(employer);
+
+        //        var UserRole = await _context.UserRoles
+        //            .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        //        if (role != null)
+        //            _context.UserRoles.Remove(UserRole);
+
+        //        await _context.SaveChangesAsync();
+
+        //        var result = await _userManager.DeleteAsync(user);
+
+        //        if (!result.Succeeded)
+        //            return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
+        //            {
+        //                Message = "User Deletion Failed"
+        //            });
+
+        //        return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
+        //        {
+        //            Message = "User Deleted Successfully"
+        //        });
+        //    }
+        //    else if (role == "Admin" || role == "SubAdmin")
+        //    {
+        //        var UserRole = await _context.UserRoles
+        //            .FirstOrDefaultAsync(e => e.UserId == userId);
+
+        //        if (role != null)
+        //            _context.UserRoles.Remove(UserRole);
+
+        //        await _context.SaveChangesAsync();
+
+        //        var result = await _userManager.DeleteAsync(user);
+
+        //        if (!result.Succeeded)
+        //            return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
+        //            {
+        //                Message = "User Deletion Failed"
+        //            });
+
+        //        return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
+        //        {
+        //            Message = "User Deleted Successfully"
+        //        });
+        //    }
+        //    return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
+        //    {
+        //        Message = "User Deletion Failed"
+        //    });
+        //}
+
+
         public async Task<ApiResponse<ConfirmationResponseDTO>> DeleteAccountAsync(int userId)
         {
-
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Id == userId);
-
-            if (user == null)
-                return new ApiResponse<ConfirmationResponseDTO>(404, new ConfirmationResponseDTO
-                {
-                    Message = "User Not Found"
-                });
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var role = roles.FirstOrDefault() ?? "Unknown";
-            
-            if(role == "Company")
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                var employer = await _context.TbEmployers
-                .FirstOrDefaultAsync(e => e.UserId == userId);
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
+                    return new ApiResponse<ConfirmationResponseDTO>(404, new ConfirmationResponseDTO { Message = "User Not Found" });
 
-                if (employer != null)
-                    _context.TbEmployers.Remove(employer);
+                var roles = await _userManager.GetRolesAsync(user);
+                var role = roles.FirstOrDefault() ?? "Unknown";
 
-                var UserRole = await _context.UserRoles
-                    .FirstOrDefaultAsync(e => e.UserId == userId);
+                // 1. Delete all Feedbacks submitted by this user
+                var feedbacks = await _context.TbFeedbacks.Where(f => f.ReviewerId == userId).ToListAsync();
+                if (feedbacks.Any()) _context.TbFeedbacks.RemoveRange(feedbacks);
 
-                if (role != null)
-                    _context.UserRoles.Remove(UserRole);
+                if (role == "Company")
+                {
+                    var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == userId);
+                    if (employer != null)
+                    {
+                        var jobIds = await _context.TbJobs.Where(j => j.EmployerId == employer.Id).Select(j => j.Id).ToListAsync();
+                        if (jobIds.Any())
+                        {
+                            var applicationIds = await _context.TbApplications.Where(a => jobIds.Contains(a.JobId)).Select(a => a.Id).ToListAsync();
+
+                            // Delete Interviews -> Applications -> JobSkills -> Jobs
+                            if (applicationIds.Any())
+                            {
+                                var interviews = await _context.TbInterviews.Where(i => applicationIds.Contains(i.ApplicationId)).ToListAsync();
+                                if (interviews.Any()) _context.TbInterviews.RemoveRange(interviews);
+
+                                var applications = await _context.TbApplications.Where(a => applicationIds.Contains(a.Id)).ToListAsync();
+                                _context.TbApplications.RemoveRange(applications);
+                            }
+
+                            var jobSkills = await _context.TbJobSkills.Where(js => jobIds.Contains(js.JobId)).ToListAsync();
+                            if (jobSkills.Any()) _context.TbJobSkills.RemoveRange(jobSkills);
+
+                            var jobs = await _context.TbJobs.Where(j => jobIds.Contains(j.Id)).ToListAsync();
+                            _context.TbJobs.RemoveRange(jobs);
+                        }
+
+                        _context.TbEmployers.Remove(employer);
+                    }
+                }
+                else if (role == "Candidate")
+                {
+                    var seeker = await _context.TbSeekers.FirstOrDefaultAsync(s => s.UserId == userId);
+                    if (seeker != null)
+                    {
+                        var applicationIds = await _context.TbApplications.Where(a => a.SeekerId == seeker.Id).Select(a => a.Id).ToListAsync();
+
+                        if (applicationIds.Any())
+                        {
+                            var interviews = await _context.TbInterviews.Where(i => applicationIds.Contains(i.ApplicationId)).ToListAsync();
+                            if (interviews.Any()) _context.TbInterviews.RemoveRange(interviews);
+
+                            var applications = await _context.TbApplications.Where(a => a.SeekerId == seeker.Id).ToListAsync();
+                            _context.TbApplications.RemoveRange(applications);
+                        }
+
+                        var seekerSkills = await _context.TbSeekerSkills.Where(ss => ss.SeekerId == seeker.Id).ToListAsync();
+                        if (seekerSkills.Any()) _context.TbSeekerSkills.RemoveRange(seekerSkills);
+
+                        _context.TbSeekers.Remove(seeker);
+                    }
+                }
+
+                // Remove User Roles manually (optional but safe)
+                var userRoles = await _context.UserRoles.Where(ur => ur.UserId == userId).ToListAsync();
+                if (userRoles.Any()) _context.UserRoles.RemoveRange(userRoles);
 
                 await _context.SaveChangesAsync();
 
+                // Delete the IdentityUser
                 var result = await _userManager.DeleteAsync(user);
-
                 if (!result.Succeeded)
-                    return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
-                    {
-                        Message = "User Deletion Failed"
-                    });
-
-                return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
                 {
-                    Message = "User Deleted Successfully"
-                });
+                    await transaction.RollbackAsync();
+                    return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO { Message = "User Deletion Failed" });
+                }
+
+                await transaction.CommitAsync();
+
+                return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "User Deleted Successfully" });
             }
-            else if (role == "Admin" || role == "SubAdmin")
+            catch (Exception ex)
             {
-                var UserRole = await _context.UserRoles
-                    .FirstOrDefaultAsync(e => e.UserId == userId);
-
-                if (role != null)
-                    _context.UserRoles.Remove(UserRole);
-
-                await _context.SaveChangesAsync();
-
-                var result = await _userManager.DeleteAsync(user);
-
-                if (!result.Succeeded)
-                    return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
-                    {
-                        Message = "User Deletion Failed"
-                    });
-
-                return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
-                {
-                    Message = "User Deleted Successfully"
-                });
+                await transaction.RollbackAsync();
+                return new ApiResponse<ConfirmationResponseDTO>(500, new ConfirmationResponseDTO { Message = $"An error occurred: {ex.Message}" });
             }
-            return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
-            {
-                Message = "User Deletion Failed"
-            });
         }
+
 
         public async Task<ApiResponse<ConfirmationResponseDTO>> ChangePasswordAsync(int userId,ChangePasswordDTO changePasswordDto)
         {
