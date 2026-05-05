@@ -502,6 +502,58 @@ namespace GoWork.Services.JobService
             return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
         }
 
+
+        public async Task<ApiResponse<string>> EnhanceJobDescriptionAsync(EnhanceJobDescriptionDTO dto)
+        {
+            var apiKey = _configuration["OpenAI:ApiKey"];
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                return new ApiResponse<string>(500, "AI Service is not configured. Please contact support.");
+            }
+
+            try
+            {
+                var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
+                var chatClient = new ChatClient(modelName, apiKey);
+
+                var prompt = $@"
+                You are a professional HR and Technical Recruiter. Your goal is to take a draft job title and description and transform them into a high-quality, professional, and engaging job posting. 
+
+                Instructions:
+                1. Improve the structure and flow of the content.
+                2. Use professional and persuasive language to attract top talent.
+                3. Organize the information into clear sections such as 'About the Role', 'Responsibilities', and 'Requirements'.
+                4. Ensure the tone is appropriate for a modern workplace.
+                5. Do NOT change the core meaning or the essential requirements of the job.
+                6. Return ONLY the enhanced description text, without any additional comments, markdown headers like '###', or conversational filler.
+                7. If the input is in Arabic, respond in Arabic. If English, respond in English.
+
+                Job Title: {dto.Title}
+                Original Description: {dto.Description}";
+
+                var options = new ChatCompletionOptions
+                {
+                    Temperature = 0.3f,
+                };
+
+                var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new SystemChatMessage(prompt) }, options);
+                var enhancedDescription = completion.Value.Content[0].Text?.Trim();
+
+                if (string.IsNullOrWhiteSpace(enhancedDescription))
+                {
+                    return new ApiResponse<string>(500, "AI failed to generate an enhanced description.");
+                }
+
+                return new ApiResponse<string>(200, enhancedDescription);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"AI Enhancement Failed: {ex.Message}");
+                return new ApiResponse<string>(500, "An error occurred while communicating with the AI service.");
+            }
+        }
+
+
         // ==================== Job Applications ====================
 
         public async Task<ApiResponse<ApplicationResultDto>> ApplyToJobAsync(int jobId, int seekerId)

@@ -119,6 +119,17 @@ namespace GoWork.Controllers.JobController
         }
 
         /// <summary>
+        /// Enhance a job description using AI.
+        /// </summary>
+        [HttpPost("enhance-description")]
+        [Authorize(Roles = "Company")]
+        public async Task<ActionResult<ApiResponse<string>>> EnhanceDescription(EnhanceJobDescriptionDTO dto)
+        {
+            var response = await _jobService.EnhanceJobDescriptionAsync(dto);
+            return StatusCode(response.StatusCode, response);
+        }
+
+        /// <summary>
         /// Update an existing job.
         /// </summary>
         [HttpPut("jobs/{id}")]
