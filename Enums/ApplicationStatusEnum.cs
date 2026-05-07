@@ -8,7 +8,8 @@
         Accepted = 4,   // Approved to move forward (e.g., to interview)
         //OfferExtended = 5,   // Job offer sent
         Hired = 6,   // Candidate accepted offer and is hired,
-        Withdrawn = 7    // Candidate withdrew the application
+        Withdrawn = 7,    // Candidate withdrew the application
+        Interview = 8,   // Application is in interview stage
     }
 
 }
