@@ -11,7 +11,8 @@ namespace GoWork.Controllers.Dashboard
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin, Company")]
+
     public class InterviewsController : ControllerBase
     {
         private readonly IInterviewService _interviewService;
@@ -155,6 +156,79 @@ namespace GoWork.Controllers.Dashboard
         public async Task<ActionResult<ApiResponse<List<LookUpDTO>>>> GetInterviewStatuses()
         {
             var response = await _interviewService.GetInterviewStatusesAsync();
+
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        [HttpGet("shortlisted")]
+        public async Task<ActionResult<ApiResponse<PaginatedResult<CompanyApplicationDTO>>>> GetShortlistedApplications(
+            [FromQuery] InterviewFilterDTO filter)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var response = await _interviewService.GetShortlistedApplicationsAsync(userId, filter);
+
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        [HttpPost("schedule")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> ScheduleInterview(ScheduleInterviewDTO dto)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var response = await _interviewService.ScheduleInterviewAsync(userId, dto);
+
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> UpdateInterview(int id, ScheduleInterviewDTO dto)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var response = await _interviewService.UpdateInterviewAsync(userId, id, dto);
+
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        [HttpPost("{id}/cancel")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> CancelInterview(int id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var response = await _interviewService.MarkAsCancelledAsync(userId, id);
+
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        [HttpPost("{id}/missing")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> MissingInterview(int id)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var response = await _interviewService.MarkAsMissingAsync(userId, id);
+
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        [HttpPost("{id}/complete")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> CompleteInterview(int id, InterviewOutcomeDTO dto)
+        {
+            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var response = await _interviewService.CompleteInterviewAsync(userId, id, dto);
 
             if (response.StatusCode != 200)
                 return StatusCode(response.StatusCode, response);

@@ -125,5 +125,35 @@ namespace GoWork.Controllers.Mobile
 
             return Ok(new { Message = "Application status updated successfully." });
         }
+
+        [Authorize(Roles = "Company")]
+        [HttpPost("{applicationId}/shortlist")]
+        public async Task<IActionResult> ShortlistApplication(int applicationId)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdString, out int userId))
+                return Unauthorized(new { Message = "User ID not found or invalid." });
+
+            var response = await _applicationService.ShortlistApplicationAsync(userId, applicationId);
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        [Authorize(Roles = "Company")]
+        [HttpPost("{applicationId}/reject")]
+        public async Task<IActionResult> RejectApplication(int applicationId)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdString, out int userId))
+                return Unauthorized(new { Message = "User ID not found or invalid." });
+
+            var response = await _applicationService.RejectApplicationAsync(userId, applicationId);
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
     }
 }

@@ -195,8 +195,8 @@ namespace GoWork.Services.ApplicationService
 
 
         public async Task<PaginatedResult<CompanyApplicationDTO>> GetJobApplicationsAsync(
-    int employerUserId,
-    CompanyApplicationsFilterDTO filter)
+   int employerUserId,
+   CompanyApplicationsFilterDTO filter)
         {
             var employer = await _context.TbEmployers
                 .FirstOrDefaultAsync(e => e.UserId == employerUserId);
@@ -271,7 +271,8 @@ namespace GoWork.Services.ApplicationService
                         ? null
                         : _fileService.DownloadUrlAsync(a.ResumeBlobUrl).SasUrl,
                     StatusId = a.StatusId,
-                    StatusName = a.StatusName
+                    StatusName = a.StatusName,
+                    CanAction = a.StatusId == (int)ApplicationStatusEnum.PendingReview
                 })
                 .ToList();
 
@@ -311,6 +312,50 @@ namespace GoWork.Services.ApplicationService
             await _context.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> ShortlistApplicationAsync(int employerUserId, int applicationId)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var application = await _context.TbApplications
+                .Include(a => a.Job)
+                .FirstOrDefaultAsync(a => a.Id == applicationId && a.Job.EmployerId == employer.Id);
+
+            if (application == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
+
+            if (application.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Only applications in Pending Review status can be shortlisted.");
+
+            application.ApplicationStatusId = (int)ApplicationStatusEnum.Shortlisted;
+            await _context.SaveChangesAsync();
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Application shortlisted successfully." });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> RejectApplicationAsync(int employerUserId, int applicationId)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var application = await _context.TbApplications
+                .Include(a => a.Job)
+                .FirstOrDefaultAsync(a => a.Id == applicationId && a.Job.EmployerId == employer.Id);
+
+            if (application == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
+
+            if (application.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Only applications in Pending Review status can be rejected from this page.");
+
+            application.ApplicationStatusId = (int)ApplicationStatusEnum.Rejected;
+            await _context.SaveChangesAsync();
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Application rejected successfully." });
         }
     }
 }

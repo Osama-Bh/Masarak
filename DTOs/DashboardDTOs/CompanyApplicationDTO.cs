@@ -11,5 +11,6 @@
         public string? ResumeUrl { get; set; }
         public int StatusId { get; set; }
         public string StatusName { get; set; } = null!;
+        public bool CanAction { get; set; }
     }
 }

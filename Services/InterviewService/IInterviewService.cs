@@ -26,5 +26,12 @@ namespace GoWork.Services.InterviewService
         Task<ApiResponse<InterviewResponseDTO>> GetCandidateInterviews(InterviewRequestDTO requestDTO);
         Task<ApiResponse<ConfirmationResponseDTO>> HandleInterviewActionAsync(int interviewId, int userId, InterviewActionDTO dto);
 
+        Task<ApiResponse<PaginatedResult<CompanyApplicationDTO>>> GetShortlistedApplicationsAsync(int employerUserId, InterviewFilterDTO filter);
+        Task<ApiResponse<ConfirmationResponseDTO>> ScheduleInterviewAsync(int employerUserId, ScheduleInterviewDTO dto);
+        Task<ApiResponse<ConfirmationResponseDTO>> UpdateInterviewAsync(int employerUserId, int interviewId, ScheduleInterviewDTO dto);
+        Task<ApiResponse<ConfirmationResponseDTO>> MarkAsCancelledAsync(int employerUserId, int interviewId);
+        Task<ApiResponse<ConfirmationResponseDTO>> MarkAsMissingAsync(int employerUserId, int interviewId);
+        Task<ApiResponse<ConfirmationResponseDTO>> CompleteInterviewAsync(int employerUserId, int interviewId, InterviewOutcomeDTO dto);
+
     }
 }

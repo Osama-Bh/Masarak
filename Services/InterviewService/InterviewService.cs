@@ -318,5 +318,198 @@ namespace GoWork.Services.InterviewService
 
             return new ApiResponse<List<LookUpDTO>>(200, items);
         }
+
+        public async Task<ApiResponse<PaginatedResult<CompanyApplicationDTO>>> GetShortlistedApplicationsAsync(int employerUserId, InterviewFilterDTO filter)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null) return new ApiResponse<PaginatedResult<CompanyApplicationDTO>>(404, "Employer not found.");
+
+            var query = _context.TbApplications
+                .Include(a => a.Seeker).ThenInclude(s => s.ApplicationUser)
+                .Include(a => a.Job)
+                .Include(a => a.ApplicationStatus)
+                .Where(a => a.Job.EmployerId == employer.Id && a.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted)
+                // Optionally exclude those already scheduled
+                .Where(a => !_context.TbInterviews.Any(i => i.ApplicationId == a.Id && i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled))
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+            {
+                var term = filter.SearchTerm.ToLower();
+                query = query.Where(a =>
+                    (a.Seeker.FirsName + " " + a.Seeker.LastName).ToLower().Contains(term) ||
+                    a.Job.Title.ToLower().Contains(term));
+            }
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(a => a.ApplicationDate)
+                .Skip((filter.Page - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .Select(a => new CompanyApplicationDTO
+                {
+                    ApplicationId = a.Id,
+                    CandidateName = a.Seeker.FirsName + " " + a.Seeker.LastName,
+                    CandidateEmail = a.Seeker.ApplicationUser.Email ?? string.Empty,
+                    JobTitle = a.Job.Title,
+                    ApplicationDate = a.ApplicationDate,
+                    CandidateDescription = a.Seeker.Major ?? string.Empty,
+                    StatusId = a.ApplicationStatusId,
+                    StatusName = a.ApplicationStatus.Name,
+                    CanAction = true // Shortlisted candidates are actionable in the interview context
+                })
+                .ToListAsync();
+
+            return new ApiResponse<PaginatedResult<CompanyApplicationDTO>>(200, new PaginatedResult<CompanyApplicationDTO>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                CurrentPage = filter.Page,
+                PageSize = filter.PageSize
+            });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> ScheduleInterviewAsync(int employerUserId, ScheduleInterviewDTO dto)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var application = await _context.TbApplications
+                .Include(a => a.Job)
+                .FirstOrDefaultAsync(a => a.Id == dto.ApplicationId && a.Job.EmployerId == employer.Id);
+
+            if (application == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
+
+            // Create Address
+            var address = new Models.Address
+            {
+                AddressLine1 = dto.AddressLine1,
+                CountryId = dto.CountryId,
+                GovernateId = dto.GovernateId
+            };
+            _context.TbAddresses.Add(address);
+            await _context.SaveChangesAsync(); // Save to get AddressId
+
+            var interview = new Models.Interview
+            {
+                ApplicationId = dto.ApplicationId,
+                InterviewDate = dto.InterviewDate,
+                InterviewTypeId = dto.InterviewTypeId,
+                Notes = dto.Notes,
+                MeetingLink = dto.MeetingLink,
+                AddressId = address.Id,
+                InterviewStatusId = (int)InterviewStatusEnum.Scheduled
+            };
+
+            _context.TbInterviews.Add(interview);
+
+            // Optionally update application status to 'Interview' stage if that's desired
+            // application.ApplicationStatusId = (int)ApplicationStatusEnum.Interview;
+
+            await _context.SaveChangesAsync();
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Interview scheduled successfully." });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> UpdateInterviewAsync(int employerUserId, int interviewId, ScheduleInterviewDTO dto)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var interview = await _context.TbInterviews
+                .Include(i => i.Application).ThenInclude(a => a.Job)
+                .Include(i => i.Address)
+                .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.Job.EmployerId == employer.Id);
+
+            if (interview == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
+
+            interview.InterviewDate = dto.InterviewDate;
+            interview.InterviewTypeId = dto.InterviewTypeId;
+            interview.Notes = dto.Notes;
+            interview.MeetingLink = dto.MeetingLink;
+            interview.InterviewStatusId = (int)InterviewStatusEnum.Scheduled; // Maintain scheduled status (or set to Rescheduled)
+
+            if (interview.Address != null)
+            {
+                interview.Address.AddressLine1 = dto.AddressLine1;
+                interview.Address.CountryId = dto.CountryId;
+                interview.Address.GovernateId = dto.GovernateId;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Interview updated successfully." });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> MarkAsCancelledAsync(int employerUserId, int interviewId)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var interview = await _context.TbInterviews
+                .Include(i => i.Application).ThenInclude(a => a.Job)
+                .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.Job.EmployerId == employer.Id);
+
+            if (interview == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
+
+            if (interview.InterviewDate.Date > DateTime.UtcNow.Date)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Interview can only be cancelled on or after the interview date.");
+
+            interview.InterviewStatusId = (int)InterviewStatusEnum.Cancelled;
+            interview.Application.ApplicationStatusId = (int)ApplicationStatusEnum.Rejected; // Requirement: update application status to rejected
+
+            await _context.SaveChangesAsync();
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Interview cancelled and application rejected." });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> MarkAsMissingAsync(int employerUserId, int interviewId)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var interview = await _context.TbInterviews
+                .Include(i => i.Application).ThenInclude(a => a.Job)
+                .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.Job.EmployerId == employer.Id);
+
+            if (interview == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
+
+            if (interview.InterviewDate.Date > DateTime.UtcNow.Date)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Interview can only be marked as missing on or after the interview date.");
+
+            interview.InterviewStatusId = (int)InterviewStatusEnum.MissingInterview;
+            interview.Application.ApplicationStatusId = (int)ApplicationStatusEnum.MissingInterview; // Requirement: update application status to missing interview
+
+            await _context.SaveChangesAsync();
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Interview marked as missing." });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> CompleteInterviewAsync(int employerUserId, int interviewId, InterviewOutcomeDTO dto)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var interview = await _context.TbInterviews
+                .Include(i => i.Application).ThenInclude(a => a.Job)
+                .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.Job.EmployerId == employer.Id);
+
+            if (interview == null) return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
+
+            if (interview.InterviewDate.Date > DateTime.UtcNow.Date)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Interview can only be completed on or after the interview date.");
+
+            interview.InterviewStatusId = (int)InterviewStatusEnum.Completed;
+
+            // Handle Application Outcome
+            interview.Application.ApplicationStatusId = dto.IsHired
+                ? (int)ApplicationStatusEnum.Hired
+                : (int)ApplicationStatusEnum.Rejected;
+
+            await _context.SaveChangesAsync();
+
+            var resultMsg = dto.IsHired ? "Candidate hired successfully." : "Candidate rejected after interview.";
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = resultMsg });
+        }
     }
 }

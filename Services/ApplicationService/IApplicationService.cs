@@ -13,6 +13,9 @@ namespace GoWork.Services.ApplicationService
 
         Task<PaginatedResult<CompanyApplicationDTO>> GetJobApplicationsAsync(int employerUserId, CompanyApplicationsFilterDTO filter);
         Task<bool> UpdateApplicationStatusAsync(int employerUserId, int applicationId, int newStatusId);
+        Task<ApiResponse<ConfirmationResponseDTO>> ShortlistApplicationAsync(int employerUserId, int applicationId);
+        Task<ApiResponse<ConfirmationResponseDTO>> RejectApplicationAsync(int employerUserId, int applicationId);
+
 
     }
 }
