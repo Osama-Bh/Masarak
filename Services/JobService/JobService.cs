@@ -730,8 +730,6 @@ namespace GoWork.Services.JobService
                     
                     
                     ### Candidate Information:
-                    - **Name**: {seeker.FirsName} {seeker.LastName}
-                    - **Major**: {seeker.Major ?? "N/A"}
                     - **Skills**: {seekerSkills}
                     - **Resume/CV URL**: {cvUrl}
                     
