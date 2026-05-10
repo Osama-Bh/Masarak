@@ -20,7 +20,7 @@ namespace GoWork.Controllers
             _context = context;
         }
 
-        
+        // hi there 
         [HttpGet("ApplicationStatuses")]
         public string GetApplicationStatuses()
         {
