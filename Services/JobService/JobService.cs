@@ -712,6 +712,13 @@ namespace GoWork.Services.JobService
                 var seekerSkills = string.Join(", ", seeker.SeekerSkills.Select(s => s.Skill.Name));
                 var jobSkills = string.Join(", ", job.JobSkills.Select(s => s.Skill.Name));
 
+                // Get CV SAS URL
+                string cvUrl = "No CV provided";
+                if (!string.IsNullOrWhiteSpace(seeker.ResumeUrl))
+                {
+                    cvUrl = _fileService.DownloadUrlAsync(seeker.ResumeUrl)?.SasUrl ?? "No CV provided";
+                }
+
                 var apiKey = _configuration["OpenAI:ApiKey"];
                 if (string.IsNullOrWhiteSpace(apiKey)) return null;
 
@@ -719,24 +726,29 @@ namespace GoWork.Services.JobService
                 var chatClient = new ChatClient(modelName, apiKey);
 
                 var prompt = $@"
-                    You are an expert technical recruiter. Your task is to calculate a match percentage between a candidate and a job posting.
+                    You are an expert technical recruiter and HR specialist. Your task is to calculate a match percentage (0-100) between a candidate and a job posting.
                     
-                    Candidate Profile:
-                    - Major: {seeker.Major}
-                    - Skills: {seekerSkills}
                     
-                    Job Requirements:
-                    - Title: {job.Title}
-                    - Description: {job.Description}
-                    - Required Skills: {jobSkills}
+                    ### Candidate Information:
+                    - **Name**: {seeker.FirsName} {seeker.LastName}
+                    - **Major**: {seeker.Major ?? "N/A"}
+                    - **Skills**: {seekerSkills}
+                    - **Resume/CV URL**: {cvUrl}
                     
-                    Instructions:
-                    1. Analyze how well the candidate's skills and major align with the job description and requirements.
-                    2. Return ONLY a single integer between 0 and 100.
-                    3. Do not include any text, symbols, or explanations.
-                    4. Return ONLY a valid JSON object with a 'Percentage' field, without any explanations or additional text, in this exact format:
+                    ### Job Requirements:
+                    - **Title**: {job.Title}
+                    - **Description**: {job.Description}
+                    - **Required Skills**: {jobSkills}
+                    
+                    ### Instructions:
+                    1. Evaluate the candidate's alignment with the job based on their major, listed skills, and the job description.
+                    2. Consider the provided Resume/CV URL as a primary source of information for the candidate's background.
+                    3. Return ONLY a single integer between 0 and 100 representing the match percentage.
+                    4. Do not include any text, symbols, or explanations.
+                    5. Return ONLY a valid JSON object with a 'Percentage' field, without any explanations or additional text, in this exact format:
                 {{{{ """"Percentage"""": 70 }}}}
-                    5. Do not include any explanations, markdown formatting, or text outside the JSON."";
+                    6. Do not include any explanations, markdown formatting, or text outside the JSON."";
+                    
                 ";
 
                 var options = new ChatCompletionOptions { Temperature = 0.1f };
