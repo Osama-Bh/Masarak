@@ -1,10 +1,11 @@
-﻿using ECommerceApp.DTOs;
+using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.JobDTOs;
 using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.FileService;
+using GoWork.Services.NotificationService;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using OpenAI.Chat;
@@ -19,12 +20,14 @@ namespace GoWork.Services.JobService
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly IFileService _fileService;
+        private readonly INotificationService _notificationService;
 
-        public JobService(ApplicationDbContext context, IConfiguration configuration, IFileService fileService)
+        public JobService(ApplicationDbContext context, IConfiguration configuration, IFileService fileService, INotificationService notificationService)
         {
             _context = context;
             _configuration = configuration;
             _fileService = fileService;
+            _notificationService = notificationService;
         }
 
         // ==================== Job CRUD ====================
@@ -192,6 +195,14 @@ namespace GoWork.Services.JobService
 
             // Handle skills
             await HandleJobSkillsAsync(job.Id, dto.SkillIds, dto.NewSkills);
+
+            // Send Notification
+            var topic = $"category_{dto.CategoryId}";
+            var data = new Dictionary<string, string>
+            {
+                { "JobId", job.Id.ToString() }
+            };
+            await _notificationService.SendTopicNotificationAsync(topic, "New Job Opportunity!", $"A new '{job.Title}' position has just opened up. Tap to view details and apply!", data);
 
             return new ApiResponse<ConfirmationResponseDTO>(201, new ConfirmationResponseDTO
             {

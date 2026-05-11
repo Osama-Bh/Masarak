@@ -7,6 +7,9 @@ using GoWork.Services.EmailService;
 using GoWork.Services.FeedbackService;
 using GoWork.Services.FileService;
 using GoWork.Services.InterviewService;
+using GoWork.Services.NotificationService;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +27,16 @@ namespace GoWork
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            // Initialize Firebase
+            var firebaseConfigPath = builder.Configuration["Firebase:CredentialsPath"];
+            if (!string.IsNullOrEmpty(firebaseConfigPath) && System.IO.File.Exists(firebaseConfigPath))
+            {
+                FirebaseApp.Create(new AppOptions()
+                {
+                    Credential = GoogleCredential.FromFile(firebaseConfigPath)
+                });
+            }
 
             // Add services to the container.
 
@@ -125,6 +138,7 @@ namespace GoWork
             builder.Services.AddScoped<IApplicationService, ApplicationService>();
             builder.Services.AddScoped<IInterviewService, InterviewService>();
             builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
             #endregion
 
 
