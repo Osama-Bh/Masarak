@@ -1,4 +1,4 @@
-﻿using ECommerceApp.DTOs;
+using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.AuthDTOs;
 using GoWork.DTOs.FileDTOs;
@@ -508,6 +508,39 @@ namespace GoWork.Service.AccountService
                     .Select(cs => cs.Skill!.Name)
                     .ToList() ?? new List<string>()
             });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> AddCandidateAddressAsync(int userId, AddAddressRequestDTO dto)
+        {
+            var seeker = await _context.TbSeekers.FirstOrDefaultAsync(s => s.UserId == userId);
+            if (seeker == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Candidate not found.");
+
+            if (seeker.AddressId.HasValue)
+            {
+                var address = await _context.TbAddresses.FirstOrDefaultAsync(a => a.Id == seeker.AddressId.Value);
+                if (address != null)
+                {
+                    address.CountryId = dto.CountryId;
+                    address.GovernateId = dto.GovernateId;
+                    address.AddressLine1 = dto.AddressLine1;
+                }
+            }
+            else
+            {
+                var address = new Address
+                {
+                    CountryId = dto.CountryId,
+                    GovernateId = dto.GovernateId,
+                    AddressLine1 = dto.AddressLine1
+                };
+                // By assigning the navigation property, EF Core handles the relationship
+                // and inserting both correctly in a single SaveChangesAsync transaction
+                seeker.Address = address;
+            }
+
+            await _context.SaveChangesAsync();
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Address saved successfully." });
         }
 
         //public async Task<ApiResponse<ConfirmationResponseDTO>> RegisterCompany(EmpolyerRegistrationDTO registrationDTO)

@@ -1,4 +1,4 @@
-﻿using ECommerceApp.DTOs;
+using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.AuthDTOs;
 using GoWork.DTOs.FileDTOs;
@@ -631,6 +631,31 @@ namespace GoWork.Controllers.Auth
             {
                 return StatusCode((int)response.StatusCode, response);
             }
+            return Ok(response);
+        }
+
+        [Authorize(Roles = "Candidate")]
+        [HttpPost("candidate/address")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> AddCandidateAddress([FromBody] AddAddressRequestDTO addressDTO)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("Invalid address data.");
+            }
+
+            var candidateIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (candidateIdClaim == null || !int.TryParse(candidateIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Unauthorized: Id not found.");
+            }
+
+            var response = await _accountService.AddCandidateAddressAsync(userId, addressDTO);
+
+            if (response.StatusCode != 200)
+            {
+                return StatusCode((int)response.StatusCode, response);
+            }
+
             return Ok(response);
         }
 
