@@ -1,4 +1,4 @@
-﻿using ECommerceApp.DTOs;
+using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.AuthDTOs;
 using GoWork.DTOs.FileDTOs;
@@ -46,6 +46,7 @@ namespace GoWork.Service.AccountService
         );
 
         Task<ApiResponse<ConfirmationResponseDTO>> UpdateCandidateProfileAsync(int candidateId, UpdateProfileDTO dto);
+        Task<ApiResponse<ConfirmationResponseDTO>> AddCandidateAddressAsync(int userId, AddAddressRequestDTO dto);
         Task<ApiResponse<CandidateResponseDTO>> GetCandidateProfileAsync(int userId);
 
         Task<ApiResponse<ConfirmationResponseDTO>> UpdateFile(UpdateFileRequestDTO requestDTO, FileCategoryEnum fileCategory);
