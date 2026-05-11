@@ -155,5 +155,20 @@ namespace GoWork.Controllers.Mobile
 
             return Ok(response);
         }
+
+        [Authorize(Roles = "Company")]
+        [HttpPost("{applicationId}/hire")]
+        public async Task<IActionResult> HireApplication(int applicationId)
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdString, out int userId))
+                return Unauthorized(new { Message = "User ID not found or invalid." });
+
+            var response = await _applicationService.HireApplicationAsync(userId, applicationId);
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
     }
 }

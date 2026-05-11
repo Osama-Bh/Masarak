@@ -190,28 +190,33 @@ namespace GoWork.Services.InterviewService
                 .Take(filter.PageSize)
                 .Select(i => new CompanyInterviewDTO
                 {
-                    InterviewId       = i.Id,
-                    ApplicationId     = i.ApplicationId,
-                    CandidateName     = i.Application.Seeker.FirsName + " " + i.Application.Seeker.LastName,
-                    CandidateEmail    = i.Application.Seeker.ApplicationUser.Email ?? string.Empty,
-                    JobTitle          = i.Application.Job.Title,
-                    InterviewDate     = i.InterviewDate,
+                    InterviewId = i.Id,
+                    ApplicationId = i.ApplicationId,
+                    CandidateName = i.Application.Seeker.FirsName + " " + i.Application.Seeker.LastName,
+                    CandidateEmail = i.Application.Seeker.ApplicationUser.Email ?? string.Empty,
+                    JobTitle = i.Application.Job.Title,
+                    InterviewDate = i.InterviewDate,
                     InterviewTypeName = i.InterviewType.Name,
-                    Location          = i.Address.AddressLine1 + " - " + i.Address.Governate.Name,
-                    StatusId          = i.InterviewStatusId,
-                    StatusName        = i.InterviewStatus.Name,
-                    Notes             = i.Notes
+                    Location = i.Address.AddressLine1 + " - " + i.Address.Governate.Name,
+                    StatusId = i.InterviewStatusId,
+                    StatusName = i.InterviewStatus.Name,
+                    Notes = i.Notes,
+                    CanReschedule = i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled || i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled,
+                    CanCancel = i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled || i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled,
+                    CanComplete = (i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled) && i.InterviewDate.Date <= DateTime.UtcNow.Date,
+                    CanMarkAsMissing = (i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled) && i.InterviewDate.Date <= DateTime.UtcNow.Date
                 })
                 .ToListAsync();
 
             return new ApiResponse<PaginatedResult<CompanyInterviewDTO>>(200, new PaginatedResult<CompanyInterviewDTO>
             {
-                Items        = items,
-                TotalCount   = totalCount,
-                CurrentPage  = filter.Page,
-                PageSize     = filter.PageSize
+                Items = items,
+                TotalCount = totalCount,
+                CurrentPage = filter.Page,
+                PageSize = filter.PageSize
             });
         }
+
 
         public async Task<ApiResponse<CompanyInterviewDTO>> GetInterviewByIdAsync(
             int employerUserId, int interviewId)
@@ -231,17 +236,21 @@ namespace GoWork.Services.InterviewService
                 .Where(i => i.Id == interviewId && i.Application.Job.EmployerId == employer.Id)
                 .Select(i => new CompanyInterviewDTO
                 {
-                    InterviewId       = i.Id,
-                    ApplicationId     = i.ApplicationId,
-                    CandidateName     = i.Application.Seeker.FirsName + " " + i.Application.Seeker.LastName,
-                    CandidateEmail    = i.Application.Seeker.ApplicationUser.Email ?? string.Empty,
-                    JobTitle          = i.Application.Job.Title,
-                    InterviewDate     = i.InterviewDate,
+                    InterviewId = i.Id,
+                    ApplicationId = i.ApplicationId,
+                    CandidateName = i.Application.Seeker.FirsName + " " + i.Application.Seeker.LastName,
+                    CandidateEmail = i.Application.Seeker.ApplicationUser.Email ?? string.Empty,
+                    JobTitle = i.Application.Job.Title,
+                    InterviewDate = i.InterviewDate,
                     InterviewTypeName = i.InterviewType.Name,
-                    Location          = i.Address.AddressLine1 + " - " + i.Address.Governate.Name,
-                    StatusId          = i.InterviewStatusId,
-                    StatusName        = i.InterviewStatus.Name,
-                    Notes             = i.Notes
+                    Location = i.Address.AddressLine1 + " - " + i.Address.Governate.Name,
+                    StatusId = i.InterviewStatusId,
+                    StatusName = i.InterviewStatus.Name,
+                    Notes = i.Notes,
+                    CanReschedule = i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled || i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled,
+                    CanCancel = i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled || i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled,
+                    CanComplete = (i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled) && i.InterviewDate.Date <= DateTime.UtcNow.Date,
+                    CanMarkAsMissing = (i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed || i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled) && i.InterviewDate.Date <= DateTime.UtcNow.Date
                 })
                 .FirstOrDefaultAsync();
 
@@ -319,6 +328,58 @@ namespace GoWork.Services.InterviewService
             return new ApiResponse<List<LookUpDTO>>(200, items);
         }
 
+        //public async Task<ApiResponse<PaginatedResult<CompanyApplicationDTO>>> GetShortlistedApplicationsAsync(int employerUserId, InterviewFilterDTO filter)
+        //{
+        //    var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+        //    if (employer == null) return new ApiResponse<PaginatedResult<CompanyApplicationDTO>>(404, "Employer not found.");
+
+        //    var query = _context.TbApplications
+        //        .Include(a => a.Seeker).ThenInclude(s => s.ApplicationUser)
+        //        .Include(a => a.Job)
+        //        .Include(a => a.ApplicationStatus)
+        //        .Where(a => a.Job.EmployerId == employer.Id && a.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted)
+        //        // Optionally exclude those already scheduled
+        //        .Where(a => !_context.TbInterviews.Any(i => i.ApplicationId == a.Id && i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled))
+        //        .AsQueryable();
+
+        //    if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+        //    {
+        //        var term = filter.SearchTerm.ToLower();
+        //        query = query.Where(a =>
+        //            (a.Seeker.FirsName + " " + a.Seeker.LastName).ToLower().Contains(term) ||
+        //            a.Job.Title.ToLower().Contains(term));
+        //    }
+
+        //    var totalCount = await query.CountAsync();
+        //    var items = await query
+        //        .OrderByDescending(a => a.ApplicationDate)
+        //        .Skip((filter.Page - 1) * filter.PageSize)
+        //        .Take(filter.PageSize)
+        //        .Select(a => new CompanyApplicationDTO
+        //        {
+        //            ApplicationId = a.Id,
+        //            CandidateName = a.Seeker.FirsName + " " + a.Seeker.LastName,
+        //            CandidateEmail = a.Seeker.ApplicationUser.Email ?? string.Empty,
+        //            JobTitle = a.Job.Title,
+        //            ApplicationDate = a.ApplicationDate,
+        //            CandidateDescription = a.Seeker.Major ?? string.Empty,
+        //            StatusId = a.ApplicationStatusId,
+        //            StatusName = a.ApplicationStatus.Name,
+        //            //CanAction = true ,// Shortlisted candidates are actionable in the interview context
+        //            MatchingPercentage = a.MatchingPercentage
+        //        })
+        //        .ToListAsync();
+
+        //    return new ApiResponse<PaginatedResult<CompanyApplicationDTO>>(200, new PaginatedResult<CompanyApplicationDTO>
+        //    {
+        //        Items = items,
+        //        TotalCount = totalCount,
+        //        CurrentPage = filter.Page,
+        //        PageSize = filter.PageSize
+        //    });
+        //}
+
+
         public async Task<ApiResponse<PaginatedResult<CompanyApplicationDTO>>> GetShortlistedApplicationsAsync(int employerUserId, InterviewFilterDTO filter)
         {
             var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
@@ -356,8 +417,10 @@ namespace GoWork.Services.InterviewService
                     CandidateDescription = a.Seeker.Major ?? string.Empty,
                     StatusId = a.ApplicationStatusId,
                     StatusName = a.ApplicationStatus.Name,
-                    CanAction = true ,// Shortlisted candidates are actionable in the interview context
-                    MatchingPercentage = a.MatchingPercentage
+                    MatchingPercentage = a.MatchingPercentage,
+                    CanShortlist = false,
+                    CanReject = true,
+                    CanHire = false
                 })
                 .ToListAsync();
 
@@ -369,6 +432,7 @@ namespace GoWork.Services.InterviewService
                 PageSize = filter.PageSize
             });
         }
+
 
         public async Task<ApiResponse<ConfirmationResponseDTO>> ScheduleInterviewAsync(int employerUserId, ScheduleInterviewDTO dto)
         {

@@ -194,6 +194,100 @@ namespace GoWork.Services.ApplicationService
         //}
 
 
+        //     public async Task<PaginatedResult<CompanyApplicationDTO>> GetJobApplicationsAsync(
+        //int employerUserId,
+        //CompanyApplicationsFilterDTO filter)
+        //     {
+        //         var employer = await _context.TbEmployers
+        //             .FirstOrDefaultAsync(e => e.UserId == employerUserId);
+
+        //         if (employer == null)
+        //             throw new Exception("Employer not found.");
+
+        //         var query = _context.TbApplications
+        //             .Include(a => a.Seeker)
+        //                 .ThenInclude(s => s.ApplicationUser)
+        //             .Include(a => a.Job)
+        //             .Include(a => a.ApplicationStatus)
+        //             .Where(a => a.Job.EmployerId == employer.Id)
+        //             .AsQueryable();
+
+        //         if (filter.JobId.HasValue && filter.JobId.Value > 0)
+        //         {
+        //             query = query.Where(a => a.JobId == filter.JobId.Value);
+        //         }
+
+        //         if (filter.StatusId.HasValue && filter.StatusId.Value > 0)
+        //         {
+        //             query = query.Where(a => a.ApplicationStatusId == filter.StatusId.Value);
+        //         }
+
+        //         if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+        //         {
+        //             var searchTerm = filter.SearchTerm.ToLower();
+
+        //             query = query.Where(a =>
+        //                 (a.Seeker.FirsName + " " + a.Seeker.LastName)
+        //                     .ToLower()
+        //                     .Contains(searchTerm)
+        //                 ||
+        //                 (a.Seeker.ApplicationUser.Email != null &&
+        //                  a.Seeker.ApplicationUser.Email.ToLower().Contains(searchTerm))
+        //             );
+        //         }
+
+        //         var totalCount = await query.CountAsync();
+
+        //         // STEP 1: Fetch raw data first
+        //         var rawApplications = await query
+        //             .OrderByDescending(a => a.ApplicationDate)
+        //             .Skip((filter.Page - 1) * filter.PageSize)
+        //             .Take(filter.PageSize)
+        //             .Select(a => new
+        //             {
+        //                 a.Id,
+        //                 CandidateName = a.Seeker.FirsName + " " + a.Seeker.LastName,
+        //                 CandidateEmail = a.Seeker.ApplicationUser.Email,
+        //                 JobTitle = a.Job.Title,
+        //                 a.ApplicationDate,
+        //                 CandidateDescription = a.Seeker.Major,
+        //                 ResumeBlobUrl = a.Seeker.ResumeUrl,
+        //                 StatusId = a.ApplicationStatusId,
+        //                 StatusName = a.ApplicationStatus.Name,
+        //                 MatchingPercentage = a.MatchingPercentage
+        //             })
+        //             .ToListAsync();
+
+        //         // STEP 2: Transform with FileService in memory
+        //         var applications = rawApplications
+        //             .Select(a => new CompanyApplicationDTO
+        //             {
+        //                 ApplicationId = a.Id,
+        //                 CandidateName = a.CandidateName,
+        //                 CandidateEmail = a.CandidateEmail ?? string.Empty,
+        //                 JobTitle = a.JobTitle,
+        //                 ApplicationDate = a.ApplicationDate,
+        //                 CandidateDescription = a.CandidateDescription ?? string.Empty,
+        //                 ResumeUrl = string.IsNullOrWhiteSpace(a.ResumeBlobUrl)
+        //                     ? null
+        //                     : _fileService.DownloadUrlAsync(a.ResumeBlobUrl).SasUrl,
+        //                 StatusId = a.StatusId,
+        //                 StatusName = a.StatusName,
+        //                 CanAction = a.StatusId == (int)ApplicationStatusEnum.PendingReview,
+        //                 MatchingPercentage = a.MatchingPercentage
+        //             })
+        //             .ToList();
+
+        //         return new PaginatedResult<CompanyApplicationDTO>
+        //         {
+        //             Items = applications,
+        //             TotalCount = totalCount,
+        //             CurrentPage = filter.Page,
+        //             PageSize = filter.PageSize
+        //         };
+        //     }
+
+
         public async Task<PaginatedResult<CompanyApplicationDTO>> GetJobApplicationsAsync(
    int employerUserId,
    CompanyApplicationsFilterDTO filter)
@@ -254,7 +348,8 @@ namespace GoWork.Services.ApplicationService
                     ResumeBlobUrl = a.Seeker.ResumeUrl,
                     StatusId = a.ApplicationStatusId,
                     StatusName = a.ApplicationStatus.Name,
-                    MatchingPercentage = a.MatchingPercentage
+                    MatchingPercentage = a.MatchingPercentage,
+                    HasCompletedInterview = a.Interviews.Any(i => i.InterviewStatusId == (int)InterviewStatusEnum.Completed)
                 })
                 .ToListAsync();
 
@@ -273,8 +368,15 @@ namespace GoWork.Services.ApplicationService
                         : _fileService.DownloadUrlAsync(a.ResumeBlobUrl).SasUrl,
                     StatusId = a.StatusId,
                     StatusName = a.StatusName,
-                    CanAction = a.StatusId == (int)ApplicationStatusEnum.PendingReview,
-                    MatchingPercentage = a.MatchingPercentage
+                    MatchingPercentage = a.MatchingPercentage,
+
+                    // Action Logic
+                    CanShortlist = a.StatusId == (int)ApplicationStatusEnum.PendingReview,
+
+                    CanReject = a.StatusId == (int)ApplicationStatusEnum.PendingReview ||
+                                (a.StatusId == (int)ApplicationStatusEnum.Shortlisted && a.HasCompletedInterview),
+
+                    CanHire = a.StatusId == (int)ApplicationStatusEnum.Shortlisted && a.HasCompletedInterview
                 })
                 .ToList();
 
@@ -286,6 +388,7 @@ namespace GoWork.Services.ApplicationService
                 PageSize = filter.PageSize
             };
         }
+
 
         public async Task<bool> UpdateApplicationStatusAsync(int employerUserId, int applicationId, int newStatusId)
         {
@@ -338,6 +441,28 @@ namespace GoWork.Services.ApplicationService
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Application shortlisted successfully." });
         }
 
+        //public async Task<ApiResponse<ConfirmationResponseDTO>> RejectApplicationAsync(int employerUserId, int applicationId)
+        //{
+        //    var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+        //    if (employer == null)
+        //        return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+        //    var application = await _context.TbApplications
+        //        .Include(a => a.Job)
+        //        .FirstOrDefaultAsync(a => a.Id == applicationId && a.Job.EmployerId == employer.Id);
+
+        //    if (application == null)
+        //        return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
+
+        //    if (application.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview)
+        //        return new ApiResponse<ConfirmationResponseDTO>(400, "Only applications in Pending Review status can be rejected from this page.");
+
+        //    application.ApplicationStatusId = (int)ApplicationStatusEnum.Rejected;
+        //    await _context.SaveChangesAsync();
+
+        //    return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Application rejected successfully." });
+        //}
+
         public async Task<ApiResponse<ConfirmationResponseDTO>> RejectApplicationAsync(int employerUserId, int applicationId)
         {
             var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
@@ -346,18 +471,53 @@ namespace GoWork.Services.ApplicationService
 
             var application = await _context.TbApplications
                 .Include(a => a.Job)
+                .Include(a => a.Interviews)
                 .FirstOrDefaultAsync(a => a.Id == applicationId && a.Job.EmployerId == employer.Id);
 
             if (application == null)
                 return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
 
-            if (application.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview)
-                return new ApiResponse<ConfirmationResponseDTO>(400, "Only applications in Pending Review status can be rejected from this page.");
+            bool isPending = application.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview;
+            bool isShortlistedWithCompletedInterview = application.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted &&
+                                                      application.Interviews != null &&
+                                                      application.Interviews.Any(i => i.InterviewStatusId == (int)InterviewStatusEnum.Completed);
+
+            if (!isPending && !isShortlistedWithCompletedInterview)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Applications can only be rejected if they are Pending Review or Shortlisted with a completed interview.");
 
             application.ApplicationStatusId = (int)ApplicationStatusEnum.Rejected;
             await _context.SaveChangesAsync();
 
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Application rejected successfully." });
+        }
+
+        public async Task<ApiResponse<ConfirmationResponseDTO>> HireApplicationAsync(int employerUserId, int applicationId)
+        {
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == employerUserId);
+            if (employer == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Employer not found.");
+
+            var application = await _context.TbApplications
+                .Include(a => a.Job)
+                .Include(a => a.Interviews)
+                .FirstOrDefaultAsync(a => a.Id == applicationId && a.Job.EmployerId == employer.Id);
+
+            if (application == null)
+                return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
+
+            if (application.ApplicationStatusId != (int)ApplicationStatusEnum.Shortlisted)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Only shortlisted applications can be hired.");
+
+            bool hasCompletedInterview = application.Interviews != null &&
+                                        application.Interviews.Any(i => i.InterviewStatusId == (int)InterviewStatusEnum.Completed);
+
+            if (!hasCompletedInterview)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Cannot hire a candidate without a completed interview.");
+
+            application.ApplicationStatusId = (int)ApplicationStatusEnum.Hired;
+            await _context.SaveChangesAsync();
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Candidate hired successfully." });
         }
     }
 }
