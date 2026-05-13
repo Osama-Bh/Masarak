@@ -98,7 +98,7 @@ namespace GoWork.Controllers.Mobile
         /// Get paginated list of all applications for the company's jobs.
         /// Supports search by job title or candidate name, and filtering by status or job.
         /// </summary>
-        [HttpGet]
+        [HttpGet("CompanyApplications")]
         public async Task<ActionResult<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>>> GetApplications(
             [FromQuery] CompanyApplicationsRequestDTO request)
         {
@@ -119,8 +119,9 @@ namespace GoWork.Controllers.Mobile
         /// <summary>
         /// Get filter dropdown data (application statuses + company's job titles).
         /// </summary>
-        [HttpGet("filters")]
-        public async Task<ActionResult<ApiResponse<CompanyApplicationFiltersDTO>>> GetFilters()
+        [HttpGet("company/filters")]
+        [Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<CompanyApplicationFiltersDTO>>> GetCompanyFilters()
         {
             var employerId = await GetEmployerIdAsync();
             if (employerId == null)
@@ -129,7 +130,6 @@ namespace GoWork.Controllers.Mobile
             var response = await _applicationService.GetCompanyApplicationFiltersAsync(employerId.Value);
             return Ok(response);
         }
-
         /// <summary>
         /// Reject an application. Allowed from PendingReview, Shortlisted, or Interviewed status.
         /// </summary>
