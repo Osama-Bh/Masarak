@@ -96,18 +96,15 @@ namespace GoWork.Controllers.Mobile
 
         /// <summary>
         /// Get paginated list of all applications for the company's jobs.
-        /// Supports search by job title or candidate name, and filtering by status or job.
         /// </summary>
-        [HttpGet("CompanyApplications")]
-        public async Task<ActionResult<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>>> GetApplications(
+        [HttpGet("company")]
+        //[Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>>> GetCompanyApplications(
             [FromQuery] CompanyApplicationsRequestDTO request)
         {
             var employerId = await GetEmployerIdAsync();
             if (employerId == null)
                 return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
-
-            if (request.Page < 1) request.Page = 1;
-            if (request.PageSize < 1 || request.PageSize > 50) request.PageSize = 10;
 
             var response = await _applicationService.GetCompanyApplicationsAsync(employerId.Value, request);
             if (response.StatusCode != 200)
@@ -115,6 +112,7 @@ namespace GoWork.Controllers.Mobile
 
             return Ok(response);
         }
+
 
         /// <summary>
         /// Get filter dropdown data (application statuses + company's job titles).
