@@ -11,6 +11,7 @@
         Withdrawn = 7,    // Candidate withdrew the application
         Interview = 8,   // Application is in interview stage
         MissingInterview = 9,   // Interview was scheduled but candidate did not attend
+        Interviewed = 10,   // Candidate has completed the interview process
     }
 
 }

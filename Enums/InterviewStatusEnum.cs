@@ -9,6 +9,7 @@
         NoShow = 5,    // Candidate did not attend
         Confirmed = 6,    // Candidate confirmed attendance
         MissingInterview = 7,   // Interview was scheduled but candidate did not attend
+        Withdrawn = 8    // Candidate withdrew from the interview process
     }
 
 }

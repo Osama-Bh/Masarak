@@ -1,11 +1,14 @@
 using ECommerceApp.DTOs;
+using GoWork.Data;
 using GoWork.DTOs;
 using GoWork.DTOs.ApplicationDTOs;
+using GoWork.DTOs.CompanyApplicationDTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.Services.ApplicationService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GoWork.Controllers.Mobile
@@ -16,12 +19,13 @@ namespace GoWork.Controllers.Mobile
     public class ApplicationsController : ControllerBase
     {
         private readonly IApplicationService _applicationService;
-        
+        private readonly ApplicationDbContext _context;
 
-        public ApplicationsController(IApplicationService applicationService)
+
+        public ApplicationsController(IApplicationService applicationService, ApplicationDbContext context)
         {
             _applicationService = applicationService;
-            
+            _context= context;
         }
 
         [HttpGet]
@@ -75,96 +79,107 @@ namespace GoWork.Controllers.Mobile
             return Ok(response);
         }
 
-        //--------
 
-        /// <summary>
-        /// Retrieves a paginated list of job applications for the currently logged-in company (Employer).
-        /// Supports filtering by SearchTerm (Name/Email), JobId, and StatusId.
+
+        // <summary>
+        /// Gets the EmployerId from the logged-in user's JWT claim.
         /// </summary>
-        [Authorize(Roles = "Company")]
-        [HttpGet("applications")]
-        public async Task<IActionResult> GetJobApplications([FromQuery] CompanyApplicationsFilterDTO filter)
+        private async Task<int?> GetEmployerIdAsync()
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdString, out int userId))
-            {
-                return Unauthorized(new { Message = "User ID not found or invalid." });
-            }
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out var userId))
+                return null;
 
-            try
-            {
-                var result = await _applicationService.GetJobApplicationsAsync(userId, filter);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message });
-            }
+            var employer = await _context.TbEmployers.FirstOrDefaultAsync(e => e.UserId == userId);
+            return employer?.Id;
         }
 
         /// <summary>
-        /// Updates the status of a specific job application (e.g., Accept or Reject).
-        /// Only the company that owns the job can update the application status.
+        /// Get paginated list of all applications for the company's jobs.
+        /// Supports search by job title or candidate name, and filtering by status or job.
         /// </summary>
-        [Authorize(Roles = "Company")]
-        [HttpPut("applications/{applicationId}/status")]
-        public async Task<IActionResult> UpdateApplicationStatus(int applicationId, [FromBody] UpdateApplicationStatusDTO dto)
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>>> GetApplications(
+            [FromQuery] CompanyApplicationsRequestDTO request)
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdString, out int userId))
-            {
-                return Unauthorized(new { Message = "User ID not found or invalid." });
-            }
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
 
-            var success = await _applicationService.UpdateApplicationStatusAsync(userId, applicationId, dto.StatusId);
+            if (request.Page < 1) request.Page = 1;
+            if (request.PageSize < 1 || request.PageSize > 50) request.PageSize = 10;
 
-            if (!success)
-            {
-                return BadRequest(new { Message = "Failed to update status. Application not found, not authorized, or invalid status ID." });
-            }
-
-            return Ok(new { Message = "Application status updated successfully." });
-        }
-
-        [Authorize(Roles = "Company")]
-        [HttpPost("{applicationId}/shortlist")]
-        public async Task<IActionResult> ShortlistApplication(int applicationId)
-        {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdString, out int userId))
-                return Unauthorized(new { Message = "User ID not found or invalid." });
-
-            var response = await _applicationService.ShortlistApplicationAsync(userId, applicationId);
+            var response = await _applicationService.GetCompanyApplicationsAsync(employerId.Value, request);
             if (response.StatusCode != 200)
                 return StatusCode(response.StatusCode, response);
 
             return Ok(response);
         }
 
-        [Authorize(Roles = "Company")]
-        [HttpPost("{applicationId}/reject")]
-        public async Task<IActionResult> RejectApplication(int applicationId)
+        /// <summary>
+        /// Get filter dropdown data (application statuses + company's job titles).
+        /// </summary>
+        [HttpGet("filters")]
+        public async Task<ActionResult<ApiResponse<CompanyApplicationFiltersDTO>>> GetFilters()
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdString, out int userId))
-                return Unauthorized(new { Message = "User ID not found or invalid." });
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
 
-            var response = await _applicationService.RejectApplicationAsync(userId, applicationId);
+            var response = await _applicationService.GetCompanyApplicationFiltersAsync(employerId.Value);
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Reject an application. Allowed from PendingReview, Shortlisted, or Interviewed status.
+        /// </summary>
+        [HttpPost("{id}/reject")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> RejectApplication(int id)
+        {
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var response = await _applicationService.RejectApplicationAsync(employerId.Value, id);
             if (response.StatusCode != 200)
                 return StatusCode(response.StatusCode, response);
 
             return Ok(response);
         }
 
-        [Authorize(Roles = "Company")]
-        [HttpPost("{applicationId}/hire")]
-        public async Task<IActionResult> HireApplication(int applicationId)
+        /// <summary>
+        /// Hire a candidate. Allowed only from Interviewed status.
+        /// </summary>
+        [HttpPost("{id}/hire")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> HireApplication(int id)
         {
-            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!int.TryParse(userIdString, out int userId))
-                return Unauthorized(new { Message = "User ID not found or invalid." });
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
 
-            var response = await _applicationService.HireApplicationAsync(userId, applicationId);
+            var response = await _applicationService.HireApplicationAsync(employerId.Value, id);
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Schedule an interview for an application. Allowed only from PendingReview status.
+        /// Creates an Interview record and changes application status to Interview.
+        /// </summary>
+        [HttpPost("{id}/schedule-interview")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> ScheduleInterview(
+            int id, [FromBody] ScheduleInterviewRequestDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ApiResponse<string>(400, "Invalid request data."));
+
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var response = await _applicationService.ScheduleInterviewAsync(employerId.Value, id, dto);
             if (response.StatusCode != 200)
                 return StatusCode(response.StatusCode, response);
 
