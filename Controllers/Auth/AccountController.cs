@@ -725,7 +725,10 @@ namespace GoWork.Controllers.Auth
             {
                 return BadRequest("Invalid Email");
             }
-            var response = await _accountService.ForgetPassword(forgetpasswordDTO);
+
+            var clientType = Request.Headers["ClientType"].ToString();
+
+            var response = await _accountService.ForgetPassword(forgetpasswordDTO, clientType);
             
             if(response.StatusCode !=200)
             {
@@ -742,7 +745,10 @@ namespace GoWork.Controllers.Auth
             {
                 return BadRequest("Invalid Email");
             }
-            var response = await _accountService.ResetPassword(resetpasswordDTO);
+
+            var clientType = Request.Headers["ClientType"].ToString();
+
+            var response = await _accountService.ResetPassword(resetpasswordDTO, clientType);
 
             if(response.StatusCode !=200)
             {
