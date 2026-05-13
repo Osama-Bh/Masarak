@@ -269,7 +269,7 @@ namespace GoWork.Service.AccountService
 
                 await transaction.CommitAsync();
 
-                var confirmationToken = _userManager.GenerateEmailConfirmationTokenAsync(user).Result;
+                var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
                 var content = $@"
                             <p style='color:#555;'>
@@ -1184,7 +1184,7 @@ namespace GoWork.Service.AccountService
 
         //}
 
-        public async Task<ApiResponse<ConfirmationResponseDTO>> ForgetPassword(ForgetPasswordDTO forgetpasswordDTO)
+        public async Task<ApiResponse<ConfirmationResponseDTO>> ForgetPassword(ForgetPasswordDTO forgetpasswordDTO, string clientType)
         {
 
             var user = await _userManager.FindByEmailAsync(forgetpasswordDTO.Email);
@@ -1197,11 +1197,16 @@ namespace GoWork.Service.AccountService
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             //var encodedToken = WebUtility.UrlEncode(token);
-            var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes(token));
+            
 
-            var resetUrl = $"{_frontendBaseUrl}?email={forgetpasswordDTO.Email}&token={encodedToken}";
+            var content = string.Empty;
+            if (clientType == "web")
+            {
+                var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes(token));
 
-            var content = $@"
+                var resetUrl = $"{_frontendBaseUrl}?email={forgetpasswordDTO.Email}&token={encodedToken}";
+
+                content = $@"
                     <p style='color:#555;'>
                       تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك.
                       اضغط على الزر أدناه للمتابعة.
@@ -1223,6 +1228,32 @@ namespace GoWork.Service.AccountService
                     <p style='color:#888; font-size:14px;'>
                       إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.
                     </p>";
+            }
+            else
+            {
+                content = $@"
+                    <p style='color:#555;'>
+                      تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك.
+                      هذا رمز إعادة التعيين الخاص بك:
+                    </p>
+
+                    <div style='text-align:center; margin:30px 0;'>
+                      <span style='display:inline-block; 
+                                   background-color:#2563eb; 
+                                   color:#ffffff; 
+                                   font-size:24px; 
+                                   font-weight:bold; 
+                                   padding:15px 25px; 
+                                   border-radius:6px; 
+                                   letter-spacing:4px;'>
+                        {token}
+                      </span>
+                    </div>
+
+                    <p style='color:#888; font-size:14px;'>
+                      إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.
+                    </p>";
+            }
 
 
             var htmlBody = BuildArabicTemplate("إعادة تعيين كلمة المرور", content);
@@ -1236,17 +1267,20 @@ namespace GoWork.Service.AccountService
 
         }
 
-        public async Task<ApiResponse<ConfirmationResponseDTO>> ResetPassword(ResetPasswordDTO resetpasswordDTO)
+        public async Task<ApiResponse<ConfirmationResponseDTO>> ResetPassword(ResetPasswordDTO resetpasswordDTO, string clientType)
         {
 
             var user = await _userManager.FindByEmailAsync(resetpasswordDTO.Email);
             if (user == null)
                 return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid request");
 
-            //var decodedToken = WebUtility.UrlDecode(resetpasswordDTO.Token);
-            var decodedToken = Encoding.UTF8.GetString(Convert.FromBase64String(resetpasswordDTO.Token));
+            var token = resetpasswordDTO.Token;
+            if (clientType == "web")
+            {//var decodedToken = WebUtility.UrlDecode(resetpasswordDTO.Token);
+                token = Encoding.UTF8.GetString(Convert.FromBase64String(resetpasswordDTO.Token));
+            }
 
-            var result = await _userManager.ResetPasswordAsync(user, decodedToken, resetpasswordDTO.NewPassword);
+            var result = await _userManager.ResetPasswordAsync(user, token, resetpasswordDTO.NewPassword);
 
             if (!result.Succeeded)
                 return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid request");

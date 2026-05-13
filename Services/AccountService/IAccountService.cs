@@ -38,11 +38,11 @@ namespace GoWork.Service.AccountService
         );
 
         Task<ApiResponse<ConfirmationResponseDTO>> ForgetPassword(
-            ForgetPasswordDTO forgetpasswordDTO
+            ForgetPasswordDTO forgetpasswordDTO, string clientType
         );
 
         Task<ApiResponse<ConfirmationResponseDTO>> ResetPassword(
-            ResetPasswordDTO resetpasswordDTO
+            ResetPasswordDTO resetpasswordDTO, string clientType
         );
 
         Task<ApiResponse<ConfirmationResponseDTO>> UpdateCandidateProfileAsync(int candidateId, UpdateProfileDTO dto);
