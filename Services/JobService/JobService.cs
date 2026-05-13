@@ -810,7 +810,7 @@ namespace GoWork.Services.JobService
             //    return new ApiResponse<ApplicationResultDto>(404, "Candidate not found.");
             //}
 
-            var alreadyApplied = await _context.TbApplications.AnyAsync(a => a.JobId == jobId && a.SeekerId == seekerId);
+            var alreadyApplied = await _context.TbApplications.AnyAsync(a => a.JobId == jobId && a.SeekerId == seekerId && a.ApplicationStatusId != (int)ApplicationStatusEnum.Withdrawn && a.ApplicationStatusId != (int)ApplicationStatusEnum.Rejected);
             if (alreadyApplied)
             {
                 return new ApiResponse<ApplicationResultDto>(400, "You have already applied for this job.");

@@ -50,7 +50,7 @@ namespace GoWork.Services.ApplicationService
                 return new ApiResponse<ApplicationsResponseDTO>(404, "seeker not found");
 
             // Build base query filtered by seeker
-            var baseQuery = _context.TbApplications.Where(a => a.SeekerId == seeker.Id);
+            var baseQuery = _context.TbApplications.Where(a => a.SeekerId == seeker.Id && a.ApplicationStatusId != (int)ApplicationStatusEnum.Withdrawn);
 
             // Apply optional status filter
             if (requestDTO.ApplicationStatusId.HasValue)
