@@ -764,9 +764,40 @@ namespace GoWork.Services.JobService
                 var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new UserChatMessage(prompt) }, options);
                 var aiResponse = completion.Value.Content[0].Text?.Trim();
 
-                if (int.TryParse(aiResponse, out int percentage))
+                //if (int.TryParse(aiResponse, out int percentage))
+                //{
+                //    return percentage;
+                //}
+
+                //return null;
+
+                if (string.IsNullOrWhiteSpace(aiResponse))
+                    return null;
+
+                var cleanedResponse = aiResponse
+                    .Replace("```json", "")
+                    .Replace("```", "")
+                    .Trim();
+
+                try
                 {
-                    return percentage;
+                    using var jsonDoc = JsonDocument.Parse(cleanedResponse);
+
+                    if (jsonDoc.RootElement.TryGetProperty("Percentage", out var percentageElement))
+                    {
+                        if (percentageElement.ValueKind == JsonValueKind.Number)
+                            return percentageElement.GetInt32();
+
+                        if (percentageElement.ValueKind == JsonValueKind.String &&
+                            int.TryParse(percentageElement.GetString(), out int percentage))
+                        {
+                            return percentage;
+                        }
+                    }
+                }
+                catch
+                {
+                    return null;
                 }
 
                 return null;
