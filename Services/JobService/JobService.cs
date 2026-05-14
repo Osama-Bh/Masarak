@@ -754,9 +754,7 @@ namespace GoWork.Services.JobService
                     2. Consider the provided Resume/CV URL as a primary source of information for the candidate's background.
                     3. Return ONLY a single integer between 0 and 100 representing the match percentage.
                     4. Do not include any text, symbols, or explanations.
-                    5. Return ONLY a valid JSON object with a 'Percentage' field, without any explanations or additional text, in this exact format:
-                {{{{ """"Percentage"""": 70 }}}}
-                    6. Do not include any explanations, markdown formatting, or text outside the JSON."";
+                    5. Do not include any explanations, markdown formatting, or text outside the JSON."";
                     
                 ";
 
@@ -764,41 +762,42 @@ namespace GoWork.Services.JobService
                 var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new UserChatMessage(prompt) }, options);
                 var aiResponse = completion.Value.Content[0].Text?.Trim();
 
-                //if (int.TryParse(aiResponse, out int percentage))
+                if (int.TryParse(aiResponse, out int percentage))
+                {
+                    return percentage;
+                }
+
+                return null;
+
+
+                //if (string.IsNullOrWhiteSpace(aiResponse))
+                //    return null;
+
+                //var cleanedResponse = aiResponse
+                //    .Replace("```json", "")
+                //    .Replace("```", "")
+                //    .Trim();
+
+                //try
                 //{
-                //    return percentage;
+                //    using var jsonDoc = JsonDocument.Parse(cleanedResponse);
+
+                //    if (jsonDoc.RootElement.TryGetProperty("Percentage", out var percentageElement))
+                //    {
+                //        if (percentageElement.ValueKind == JsonValueKind.Number)
+                //            return percentageElement.GetInt32();
+
+                //        if (percentageElement.ValueKind == JsonValueKind.String &&
+                //            int.TryParse(percentageElement.GetString(), out int percentage))
+                //        {
+                //            return percentage;
+                //        }
+                //    }
                 //}
-
-                //return null;
-
-                if (string.IsNullOrWhiteSpace(aiResponse))
-                    return null;
-
-                var cleanedResponse = aiResponse
-                    .Replace("```json", "")
-                    .Replace("```", "")
-                    .Trim();
-
-                try
-                {
-                    using var jsonDoc = JsonDocument.Parse(cleanedResponse);
-
-                    if (jsonDoc.RootElement.TryGetProperty("Percentage", out var percentageElement))
-                    {
-                        if (percentageElement.ValueKind == JsonValueKind.Number)
-                            return percentageElement.GetInt32();
-
-                        if (percentageElement.ValueKind == JsonValueKind.String &&
-                            int.TryParse(percentageElement.GetString(), out int percentage))
-                        {
-                            return percentage;
-                        }
-                    }
-                }
-                catch
-                {
-                    return null;
-                }
+                //catch
+                //{
+                //    return null;
+                //}
 
                 return null;
             }
