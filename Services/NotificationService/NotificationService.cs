@@ -35,7 +35,6 @@ namespace GoWork.Services.NotificationService
 
                 // Send a message to the devices subscribed to the provided topic.
                 string response = await FirebaseMessaging.DefaultInstance.SendAsync(message);
-                _logger.LogInformation("Successfully sent message to topic {Topic}. Response: {Response}", topic, response);
             }
             catch (Exception ex)
             {
