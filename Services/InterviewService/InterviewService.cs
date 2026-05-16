@@ -30,10 +30,10 @@ namespace GoWork.Services.InterviewService
 
             // Validate action value
             var action = dto.Action?.Trim();
-            if (!string.Equals(action, "Accept", StringComparison.OrdinalIgnoreCase) &&
+            if (!string.Equals(action, "Confirm", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(action, "Cancel", StringComparison.OrdinalIgnoreCase))
             {
-                return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid action. Use 'Accept' or 'Cancel'.");
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid action. Use 'Confirm' or 'Cancel'.");
             }
 
             // Find interview and verify ownership through Application → Seeker
@@ -48,7 +48,7 @@ namespace GoWork.Services.InterviewService
                 return new ApiResponse<ConfirmationResponseDTO>(400, "Interview can only be accepted or cancelled when in Scheduled status.");
 
             // Map action to status
-            interview.InterviewStatusId = string.Equals(action, "Accept", StringComparison.OrdinalIgnoreCase)
+            interview.InterviewStatusId = string.Equals(action, "Confirm", StringComparison.OrdinalIgnoreCase)
                 ? (int)Enums.InterviewStatusEnum.Confirmed
                 : (int)Enums.InterviewStatusEnum.Cancelled;
 
@@ -56,7 +56,7 @@ namespace GoWork.Services.InterviewService
 
             await _context.SaveChangesAsync();
 
-            var message = string.Equals(action, "Accept", StringComparison.OrdinalIgnoreCase)
+            var message = string.Equals(action, "Confirm", StringComparison.OrdinalIgnoreCase)
                 ? "Interview confirmed successfully."
                 : "Interview cancelled successfully.";
 
