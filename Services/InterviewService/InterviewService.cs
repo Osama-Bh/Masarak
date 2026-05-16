@@ -216,10 +216,32 @@ namespace GoWork.Services.InterviewService
         public async Task<ApiResponse<CompanyInterviewFiltersDTO>> GetCompanyInterviewFiltersAsync(int employerId)
         {
             // Get interview statuses
+            //var statuses = await _context.TbInterviewStatuses
+            //    .OrderBy(s => s.SortOrder)
+            //    .Select(s => new LookUpDTO { Id = s.Id, Name = s.Name })
+            //    .ToListAsync();
+
+            //var statuses = await _context.TbInterviewStatuses
+            //.Where(s =>
+            //    s.Id == (int)InterviewStatusEnum.Scheduled ||
+            //    s.Id == (int)InterviewStatusEnum.Completed || 
+            //    s.Id == (int) InterviewStatusEnum.Confirmed || 
+            //    s.Id == (int) InterviewStatusEnum.MissingInterview ||
+            //    s.Id == (int) InterviewStatusEnum.Cancelled || 
+            //    s.Id == (int)InterviewStatusEnum.Withdrawn)
+            //.OrderBy(s => s.SortOrder)
+            //.Select(s => new LookUpDTO
+            //{
+            //    Id = s.Id,
+            //    Name = s.Name
+            //})
+            //.ToListAsync();
+
             var statuses = await _context.TbInterviewStatuses
-                .OrderBy(s => s.SortOrder)
-                .Select(s => new LookUpDTO { Id = s.Id, Name = s.Name })
-                .ToListAsync();
+            .Where(s=> s.IsActive)
+            .OrderBy(s => s.SortOrder)
+            .Select(s => new LookUpDTO { Id = s.Id, Name = s.Name })
+            .ToListAsync();
 
             // Get employer's jobs for the job filter dropdown
             var jobs = await _context.TbJobs
