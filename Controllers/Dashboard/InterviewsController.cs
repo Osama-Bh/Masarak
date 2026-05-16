@@ -14,7 +14,7 @@ namespace GoWork.Controllers.Dashboard
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin, Company")]
+    [Authorize(Roles = "Admin, Company, Candidate")]
 
     public class InterviewsController : ControllerBase
     {
@@ -46,7 +46,7 @@ namespace GoWork.Controllers.Dashboard
             return Ok(response);
         }
 
-        [HttpGet("CandidateInterviews")]
+        [HttpGet("candidateinterviews")]
         [Authorize(Roles = "Candidate, Admin")]
         public async Task<ActionResult<ApiResponse<InterviewResponseDTO>>> GetCandidateInterviews([FromQuery] InterviewRequestDTO requestDTO)
         {
