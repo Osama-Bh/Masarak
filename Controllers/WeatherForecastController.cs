@@ -27,7 +27,7 @@ namespace GoWork.Controllers
         [HttpGet("ApplicationStatuses")]
         public string GetApplicationStatuses()
         {
-            var  applicationStatuses = string.Join(", ", _context.TbApplicationStatuses.Select(s => s.Name).ToList());
+            var applicationStatuses = string.Join(", ", _context.TbApplicationStatuses.Select(s => s.Name).ToList());
             return applicationStatuses;
         }
 
@@ -41,9 +41,16 @@ namespace GoWork.Controllers
         [HttpPost("pushnotification")]
         public async Task<IActionResult> SendNotification()
         {
-            await _notificationService.SendTopicNotificationAsync("all","Test Message", "Hi there");
+            await _notificationService.SendTopicNotificationAsync("all", "Test Message", "Hi there");
             return Ok();
         }
 
+        [HttpGet("AvailableCountires")]
+        public IActionResult GetCountries()
+        {
+            var countries = _context.TbCountries.Where(s=>s.IsActive).ToList();
+
+            return Ok(countries);
+        }
     }
 }
