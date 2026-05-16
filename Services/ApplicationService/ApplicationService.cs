@@ -121,8 +121,6 @@ namespace GoWork.Services.ApplicationService
             if (seeker == null)
                 return new ApiResponse<ConfirmationResponseDTO>(404, "seeker not found");
 
-            //var application = await _context.TbApplications
-            //    .FirstOrDefaultAsync(a => a.Id == applicationId && a.SeekerId == seeker.Id);
 
             var application = await _context.TbApplications
                 .FirstOrDefaultAsync(a => a.Id == applicationId);
