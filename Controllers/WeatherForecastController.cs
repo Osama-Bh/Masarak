@@ -52,5 +52,13 @@ namespace GoWork.Controllers
 
             return Ok(countries);
         }
+
+        [HttpGet("IsEmailExist")]
+        public IActionResult IsEmailExists(string Email)
+        {
+            var IsEmailExists = _context.Users.Where(s => s.Email == Email);
+
+            return Ok(IsEmailExists);
+        }
     }
 }

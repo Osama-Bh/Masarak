@@ -723,9 +723,11 @@ namespace GoWork.Services.JobService
 
                 // Get CV SAS URL
                 string cvUrl = "No CV provided";
+                string ExtractedPdfContent = null;
                 if (!string.IsNullOrWhiteSpace(seeker.ResumeUrl))
                 {
                     cvUrl = _fileService.DownloadUrlAsync(seeker.ResumeUrl)?.SasUrl ?? "No CV provided";
+                    ExtractedPdfContent = await _fileService.ExtractPdfTextAsync(cvUrl);
                 }
 
                 var apiKey = _configuration["OpenAI:ApiKey"];
@@ -734,23 +736,95 @@ namespace GoWork.Services.JobService
                 var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
                 var chatClient = new ChatClient(modelName, apiKey);
 
+                //var prompt = $@"
+                //    You are an expert technical recruiter and HR specialist. Your task is to calculate a match percentage (0-100) between a candidate and a job posting.
+                    
+                //    ### Candidate Information:
+                //    - **Resume/CV URL**: {cvUrl}
+                    
+                //    ### Job Requirements:
+                //    - **Title**: {job.Title}
+                //    - **Description**: {job.Description}
+                //    - **Required Skills**: {jobSkills}
+                    
+                //    ### Instructions:
+                //    1. Evaluate the candidate's alignment with the job based ONLY on the content of their Resume/CV.
+                //    2. Consider the provided Resume/CV URL as the SOLE source of information for the candidate's background, skills, and experience.
+                //    3. Compare the candidate's profile in the CV against the job description and required skills.
+                //    4. Return ONLY a single integer between 0 and 100 representing the match percentage.
+                //    5. Do not include any text, symbols, or explanations.";
+
                 var prompt = $@"
-                    You are an expert technical recruiter and HR specialist. Your task is to calculate a match percentage (0-100) between a candidate and a job posting.
-                    
-                    ### Candidate Information:
-                    - **Resume/CV URL**: {cvUrl}
-                    
-                    ### Job Requirements:
-                    - **Title**: {job.Title}
-                    - **Description**: {job.Description}
-                    - **Required Skills**: {jobSkills}
-                    
-                    ### Instructions:
-                    1. Evaluate the candidate's alignment with the job based ONLY on the content of their Resume/CV.
-                    2. Consider the provided Resume/CV URL as the SOLE source of information for the candidate's background, skills, and experience.
-                    3. Compare the candidate's profile in the CV against the job description and required skills.
-                    4. Return ONLY a single integer between 0 and 100 representing the match percentage.
-                    5. Do not include any text, symbols, or explanations.";
+                    You are a senior technical recruiter and ATS evaluation system.
+
+                    Your task is to calculate an accurate candidate-job matching percentage from 0 to 100.
+
+                    IMPORTANT:
+                    - Be strict and realistic.
+                    - Do NOT give high scores unless the candidate clearly matches the requirements.
+                    - Evaluate based on actual relevance, not keyword count.
+
+                    ========================
+                    JOB INFORMATION
+                    ========================
+
+                    Job Title:
+                    {job.Title}
+
+                    Job Description:
+                    {job.Description}
+
+                    Required Skills:
+                    {jobSkills}
+
+                    ========================
+                    CANDIDATE CV
+                    ========================
+
+                    Resume/CV :
+                    {ExtractedPdfContent}
+
+                    ========================
+                    EVALUATION RULES
+                    ========================
+
+                    Evaluate the candidate using these weighted criteria:
+
+                    1. Technical Skills Match (40%)
+                    - Compare the candidate's skills with the required skills.
+                    - Missing critical skills should significantly reduce the score.
+
+                    2. Relevant Experience (30%)
+                    - Check whether the candidate has experience related to the job role.
+                    - Consider technologies, responsibilities, and domain relevance.
+
+                    3. Education & Certifications (10%)
+                    - Check whether the candidate's education supports the role.
+
+                    4. Project Relevance (10%)
+                    - Evaluate whether the projects align with the required work.
+
+                    5. Seniority & Role Alignment (10%)
+                    - Compare the candidate level with the job level.
+
+                    SCORING GUIDELINES:
+                    - 90-100 = Excellent match
+                    - 75-89 = Strong match
+                    - 60-74 = Moderate match
+                    - 40-59 = Weak match
+                    - 0-39 = Poor match
+
+                    IMPORTANT RULES:
+                    - Do not assume missing information.
+                    - If important skills or experience are missing, reduce the score.
+                    - Do not inflate scores.
+                    - Be objective and strict.
+
+                    OUTPUT RULES:
+                    - Return ONLY a single integer between 0 and 100 representing the match percentage.
+                    - Do not return markdown.
+                    - Do not return explanations.
+                    - Do not include any text, symbols, or explanations.";
 
                 var options = new ChatCompletionOptions { Temperature = 0.1f };
                 var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new UserChatMessage(prompt) }, options);

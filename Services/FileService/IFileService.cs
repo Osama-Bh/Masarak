@@ -15,5 +15,7 @@ namespace GoWork.Services.FileService
 
         Task<bool> UpdateAsync(IFormFile file, string blobUri);
 
+        Task<string> ExtractPdfTextAsync(string pdfUrl);
+
     }
 }

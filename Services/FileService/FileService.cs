@@ -8,6 +8,8 @@ using GoWork.DTOs.FileDTOs;
 using GoWork.Enums;
 using Microsoft.EntityFrameworkCore;
 using MimeKit.Cryptography;
+using System.Text;
+using UglyToad.PdfPig;
 
 namespace GoWork.Services.FileService
 {
@@ -289,6 +291,27 @@ namespace GoWork.Services.FileService
 
                 _ => throw new Exception($"Unsupported content type: {contentType}")
             };
+        }
+
+        public async Task<string> ExtractPdfTextAsync(string pdfUrl)
+        {
+            using var httpClient = new HttpClient();
+
+            var pdfBytes = await httpClient.GetByteArrayAsync(pdfUrl);
+
+            using var stream = new MemoryStream(pdfBytes);
+
+            var text = new StringBuilder();
+
+            using (var document = PdfDocument.Open(stream))
+            {
+                foreach (var page in document.GetPages())
+                {
+                    text.AppendLine(page.Text);
+                }
+            }
+
+            return text.ToString();
         }
     }
 }
