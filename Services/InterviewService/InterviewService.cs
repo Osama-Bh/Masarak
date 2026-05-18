@@ -37,8 +37,12 @@ namespace GoWork.Services.InterviewService
             }
 
             // Find interview and verify ownership through Application → Seeker
+            //var interview = await _context.TbInterviews
+            //    .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.SeekerId == seeker.Id);
+
             var interview = await _context.TbInterviews
-                .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.SeekerId == seeker.Id);
+            .Include(i => i.Application)
+            .FirstOrDefaultAsync(i => i.Id == interviewId);
 
             if (interview == null)
                 return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
@@ -47,10 +51,30 @@ namespace GoWork.Services.InterviewService
             if (interview.InterviewStatusId != (int)Enums.InterviewStatusEnum.Scheduled)
                 return new ApiResponse<ConfirmationResponseDTO>(400, "Interview can only be accepted or cancelled when in Scheduled status.");
 
+
+
             // Map action to status
-            interview.InterviewStatusId = string.Equals(action, "Confirm", StringComparison.OrdinalIgnoreCase)
-                ? (int)Enums.InterviewStatusEnum.Confirmed
-                : (int)Enums.InterviewStatusEnum.Cancelled;
+            //interview.InterviewStatusId = string.Equals(action, "Confirm", StringComparison.OrdinalIgnoreCase)
+            //    ? (int)Enums.InterviewStatusEnum.Confirmed
+            //    : (int)Enums.InterviewStatusEnum.Cancelled; 
+
+            // CONFIRM
+            if (string.Equals(action, "Confirm", StringComparison.OrdinalIgnoreCase))
+            {
+                interview.InterviewStatusId = (int)InterviewStatusEnum.Confirmed;
+            }
+            // CANCEL
+            else
+            {
+                // Update interview status
+                interview.InterviewStatusId = (int)InterviewStatusEnum.Withdrawn;
+
+                // Update related application status
+                interview.Application.ApplicationStatusId =
+                    (int)ApplicationStatusEnum.Withdrawn;
+            }
+
+
 
             interview.RespondedAt = DateTime.UtcNow;
 
