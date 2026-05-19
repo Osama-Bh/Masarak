@@ -7,5 +7,7 @@ namespace GoWork.DTOs.CompanyInterviewDTOs
         public string? Search { get; set; }
         public int? InterviewStatusId { get; set; }
         public int? JobId { get; set; }
+
+        public DateTime? CurrentDate { get; set; }
     }
 }
