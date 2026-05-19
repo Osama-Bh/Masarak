@@ -20,12 +20,12 @@ namespace GoWork.Services.NotificationService
             {
                 var message = new Message()
                 {
+                    Topic = topic,
                     Notification = new Notification
                     {
                         Title = title,
                         Body = body
                     },
-                    Topic = topic,
                 };
 
                 if (data != null)
