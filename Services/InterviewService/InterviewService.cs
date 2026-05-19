@@ -530,6 +530,7 @@
 //}
 
 using ECommerceApp.DTOs;
+using GoWork.Authorization.Operations;
 using GoWork.Data;
 using GoWork.DTOs;
 using GoWork.DTOs.CompanyInterviewDTOs;
@@ -537,6 +538,9 @@ using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.InterviewDTOs;
 using GoWork.Enums;
 using GoWork.Models;
+using GoWork.Services.CurrentUserService;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
@@ -546,11 +550,15 @@ namespace GoWork.Services.InterviewService
     {
         private readonly ApplicationDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IAuthorizationService _authorizationService;
+        private readonly ICurrentUserService _currentUserService;
 
-        public InterviewService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor)
+        public InterviewService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, ICurrentUserService currentUserService)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _authorizationService = authorizationService;
+            _currentUserService = currentUserService;
         }
 
         private TimeZoneInfo GetTimeZoneFromHeader()
@@ -597,7 +605,15 @@ namespace GoWork.Services.InterviewService
 
             var interview = await _context.TbInterviews
             .Include(i => i.Application)
+            .ThenInclude(a => a.Seeker)
             .FirstOrDefaultAsync(i => i.Id == interviewId);
+
+            var result = await _authorizationService.AuthorizeAsync(_currentUserService.User, interview, "IsCandidateOwnInterviewPolicy");
+
+            if (!result.Succeeded)
+            {
+                return new ApiResponse<ConfirmationResponseDTO>(403, "You are not authorized to perform this action on this interview.");
+            }
 
             if (interview == null)
                 return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
