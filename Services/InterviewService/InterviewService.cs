@@ -268,25 +268,25 @@ namespace GoWork.Services.InterviewService
                                 CanCancel =
                 (
                     i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled
-                    && i.InterviewDate > request.CurrentDate
+                    && i.InterviewDate > now
                 )
                 ||
                 (
                     i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed
-                    && i.InterviewDate > request.CurrentDate
+                    && i.InterviewDate > now
                 ),
 
                                 CanReschedule =
                 i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled
-                && i.InterviewDate > request.CurrentDate,
+                && i.InterviewDate > now,
 
                                 CanComplete =
                 i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed
-                && i.InterviewDate <= request.CurrentDate,
+                && i.InterviewDate <= now,
 
                                 CanMarkMissing =
                 i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed
-                && i.InterviewDate <= request.CurrentDate,
+                && i.InterviewDate <= now
 
                 })
                 .ToListAsync();
