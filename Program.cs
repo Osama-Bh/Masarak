@@ -2,6 +2,7 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using GoWork.Authorization.Handlers;
+using GoWork.Authorization.Requirements;
 using GoWork.Data;
 using GoWork.Service.AccountService;
 using GoWork.Services.AdminService;
@@ -145,9 +146,14 @@ namespace GoWork
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IAuthorizationHandler, ApplicationAuthorizationHandler>();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+            builder.Services.AddScoped<IAuthorizationHandler, InterviewAuthorizationHandler>();
             builder.Services.AddHttpContextAccessor();
             #endregion
 
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy("IsCandidateOwnInterviewPolicy", policy => policy.Requirements.Add(new CandidateOwnInterviewRquirements()));
+            });
 
             #region Cors Settings
             builder.Services.AddCors(options =>
