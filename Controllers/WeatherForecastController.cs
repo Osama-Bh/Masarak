@@ -60,5 +60,13 @@ namespace GoWork.Controllers
 
             return Ok(IsEmailExists);
         }
+
+        [HttpGet("TimeZone")]
+        public IActionResult TimeZone()
+        {
+            var TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Aden");
+
+            return Ok(TimeZone);
+        }
     }
 }

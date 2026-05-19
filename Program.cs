@@ -145,6 +145,7 @@ namespace GoWork
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IAuthorizationHandler, ApplicationAuthorizationHandler>();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+            builder.Services.AddHttpContextAccessor();
             #endregion
 
 
