@@ -925,12 +925,12 @@ namespace GoWork.Services.InterviewService
             // Only Scheduled or Confirmed (when date ≠ today) can be cancelled
             var isScheduled = interview.InterviewStatusId == (int)InterviewStatusEnum.Scheduled;
 
-            var timeZoneInfo = GetTimeZoneFromHeader();
-            var localInterviewDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interview.InterviewDate, DateTimeKind.Utc), timeZoneInfo);
-            var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneInfo);
+            //var timeZoneInfo = GetTimeZoneFromHeader();
+            //var localInterviewDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interview.InterviewDate, DateTimeKind.Utc), timeZoneInfo);
+            //var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneInfo);
 
             var isConfirmedNotToday = interview.InterviewStatusId == (int)InterviewStatusEnum.Confirmed
-                                   && localInterviewDate.Date != localNow.Date;
+                                   && interview.InterviewDate != DateTime.UtcNow;
 
             if (!isScheduled && !isConfirmedNotToday)
                 return new ApiResponse<ConfirmationResponseDTO>(400,
