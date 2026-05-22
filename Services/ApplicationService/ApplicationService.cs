@@ -605,7 +605,7 @@ namespace GoWork.Services.ApplicationService
             var totalCount = await baseQuery.CountAsync();
 
             // Paginate and project
-            var items = await baseQuery
+            var items = await baseQuery.OrderByDescending(s=>s.Id)
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
                 .Select(a => new CompanyApplicationListItemDTO

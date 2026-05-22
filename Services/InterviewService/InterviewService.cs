@@ -1057,13 +1057,13 @@ namespace GoWork.Services.InterviewService
                 return new ApiResponse<ConfirmationResponseDTO>(400,
                     "Only confirmed interviews can be marked as completed.");
 
-            var timeZoneInfo = GetTimeZoneFromHeader();
-            var localInterviewDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interview.InterviewDate, DateTimeKind.Utc), timeZoneInfo);
-            var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneInfo);
+            //var timeZoneInfo = GetTimeZoneFromHeader();
+            //var localInterviewDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interview.InterviewDate, DateTimeKind.Utc), timeZoneInfo);
+            //var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneInfo);
 
-            if (localInterviewDate.Date != localNow.Date)
-                return new ApiResponse<ConfirmationResponseDTO>(400,
-                    "Interview can only be marked as completed on the interview date.");
+            //if (localInterviewDate.Date != localNow.Date)
+            //    return new ApiResponse<ConfirmationResponseDTO>(400,
+            //        "Interview can only be marked as completed on the interview date.");
 
             // Complete the interview
             interview.InterviewStatusId = (int)InterviewStatusEnum.Completed;
@@ -1091,13 +1091,13 @@ namespace GoWork.Services.InterviewService
                 return new ApiResponse<ConfirmationResponseDTO>(400,
                     "Only confirmed interviews can be marked as missing.");
 
-            var timeZoneInfo = GetTimeZoneFromHeader();
-            var localInterviewDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interview.InterviewDate, DateTimeKind.Utc), timeZoneInfo);
-            var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneInfo);
+            //var timeZoneInfo = GetTimeZoneFromHeader();
+            //var localInterviewDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(interview.InterviewDate, DateTimeKind.Utc), timeZoneInfo);
+            //var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneInfo);
 
-            if (localInterviewDate.Date != localNow.Date)
-                return new ApiResponse<ConfirmationResponseDTO>(400,
-                    "Interview can only be marked as missing on the interview date.");
+            //if (localInterviewDate.Date != localNow.Date)
+            //    return new ApiResponse<ConfirmationResponseDTO>(400,
+            //        "Interview can only be marked as missing on the interview date.");
 
             // Mark interview as missing
             interview.InterviewStatusId = (int)InterviewStatusEnum.MissingInterview;
