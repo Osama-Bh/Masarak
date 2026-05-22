@@ -569,43 +569,95 @@ namespace GoWork.Services.ApplicationService
 
         // ======================== COMPANY DASHBOARD METHODS ========================
 
-        public async Task<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>> GetCompanyApplicationsAsync(
-            int employerId, CompanyApplicationsRequestDTO request)
+        private IQueryable<Application> BuildCompanyApplicationsQuery(int employerId, CompanyApplicationsRequestDTO request)
         {
-            // Base query: all applications for this employer's jobs
-            var baseQuery = _context.TbApplications
+            var query = _context.TbApplications
                 .Where(a => a.Job.EmployerId == employerId);
 
-            // Search filter: by job title or candidate name
             if (!string.IsNullOrWhiteSpace(request.Search))
             {
                 var search = request.Search.Trim().ToLower();
-                baseQuery = baseQuery.Where(a =>
+                query = query.Where(a =>
                     a.Job.Title.ToLower().Contains(search) ||
                     (a.Seeker.FirsName + " " + a.Seeker.MiddleName + " " + a.Seeker.LastName).ToLower().Contains(search)
                 );
             }
 
-            // Filter by application status
             if (request.ApplicationStatusId.HasValue)
             {
-                baseQuery = baseQuery.Where(a => a.ApplicationStatusId == request.ApplicationStatusId.Value);
+                query = query.Where(a => a.ApplicationStatusId == request.ApplicationStatusId.Value);
             }
 
-            // Filter by job
             if (request.JobId.HasValue)
             {
-                baseQuery = baseQuery.Where(a => a.JobId == request.JobId.Value);
+                query = query.Where(a => a.JobId == request.JobId.Value);
             }
 
-            // Sort by newest first
-            baseQuery = baseQuery.OrderByDescending(a => a.ApplicationDate);
+            return query;
+        }
 
-            // Count before pagination
+        private IQueryable<Application> FilterCompanyApplicationsByActivity(IQueryable<Application> query, bool activeOnly)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var historicalQuery = query.Where(a =>
+                (
+                    a.ApplicationStatusId == (int)ApplicationStatusEnum.Withdrawn &&
+                    a.ApplicationDate.Date < today
+                )
+                ||
+                (
+                    a.ApplicationStatusId == (int)ApplicationStatusEnum.MissingInterview &&
+                    a.Interviews
+                        .OrderByDescending(i => i.InterviewDate)
+                        .Select(i => (DateTime?)i.InterviewDate.Date)
+                        .FirstOrDefault() < today
+                )
+                ||
+                (
+                    (a.ApplicationStatusId == (int)ApplicationStatusEnum.Rejected ||
+                     a.ApplicationStatusId == (int)ApplicationStatusEnum.Hired) &&
+                    (
+                        (
+                            a.Interviews.Any() &&
+                            a.Interviews
+                                .OrderByDescending(i => i.InterviewDate)
+                                .Select(i => (DateTime?)i.InterviewDate.Date)
+                                .FirstOrDefault() < today
+                        )
+                        ||
+                        (
+                            !a.Interviews.Any() &&
+                            a.ApplicationDate.Date < today
+                        )
+                    )
+                )
+            );
+
+            return activeOnly
+                ? query.Where(a => !historicalQuery.Select(h => h.Id).Contains(a.Id))
+                : historicalQuery;
+        }
+
+        private static IQueryable<Application> OrderCompanyApplications(IQueryable<Application> query, bool activeOnly)
+        {
+            return activeOnly
+                ? query.OrderByDescending(a => a.ApplicationDate).ThenByDescending(a => a.Id)
+                : query.OrderByDescending(a => a.ApplicationDate).ThenByDescending(a => a.Id);
+        }
+
+        private async Task<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>> GetCompanyApplicationsByActivityAsync(
+            int employerId,
+            CompanyApplicationsRequestDTO request,
+            bool activeOnly)
+        {
+            var baseQuery = BuildCompanyApplicationsQuery(employerId, request);
+            baseQuery = FilterCompanyApplicationsByActivity(baseQuery, activeOnly);
+            baseQuery = OrderCompanyApplications(baseQuery, activeOnly);
+
             var totalCount = await baseQuery.CountAsync();
 
-            // Paginate and project
-            var items = await baseQuery.OrderByDescending(s=>s.Id)
+            var items = await baseQuery
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)
                 .Select(a => new CompanyApplicationListItemDTO
@@ -619,8 +671,6 @@ namespace GoWork.Services.ApplicationService
                     MatchingPercentage = a.MatchingPercentage,
                     ApplicationStatus = a.ApplicationStatus.Name,
                     CvDownloadUrl = a.Seeker.ResumeUrl,
-
-                    // Action flags based on status
                     CanReject = a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview
                              || a.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted
                              || a.ApplicationStatusId == (int)ApplicationStatusEnum.Interviewed,
@@ -629,7 +679,6 @@ namespace GoWork.Services.ApplicationService
                 })
                 .ToListAsync();
 
-            // Resolve file URLs (profile photo and CV) via FileService
             foreach (var item in items)
             {
                 if (!string.IsNullOrEmpty(item.ProfilePhoto))
@@ -649,11 +698,26 @@ namespace GoWork.Services.ApplicationService
                 });
         }
 
+        public async Task<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>> GetCompanyApplicationsAsync(
+            int employerId, CompanyApplicationsRequestDTO request)
+        {
+            return await GetCompanyApplicationsByActivityAsync(employerId, request, activeOnly: true);
+        }
+
+        public async Task<ApiResponse<PaginatedResult<CompanyApplicationListItemDTO>>> GetCompanyEmploymentRecordsAsync(
+            int employerId, CompanyApplicationsRequestDTO request)
+        {
+            return await GetCompanyApplicationsByActivityAsync(employerId, request, activeOnly: false);
+        }
+
         public async Task<ApiResponse<CompanyApplicationFiltersDTO>> GetCompanyApplicationFiltersAsync(int employerId)
         {
-            // Get application statuses
             var statuses = await _context.TbApplicationStatuses
-                .Where(s => s.IsActive)
+                .Where(s => s.IsActive &&
+                            s.Id != (int)ApplicationStatusEnum.Withdrawn &&
+                            s.Id != (int)ApplicationStatusEnum.MissingInterview &&
+                            s.Id != (int)ApplicationStatusEnum.Rejected &&
+                            s.Id != (int)ApplicationStatusEnum.Hired)
                 .OrderBy(s => s.SortOrder)
                 .Select(s => new LookUpDTO { Id = s.Id, Name = s.Name })
                 .ToListAsync();

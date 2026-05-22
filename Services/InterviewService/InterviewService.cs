@@ -726,6 +726,47 @@ namespace GoWork.Services.InterviewService
 
         // ======================== COMPANY DASHBOARD METHODS ========================
 
+        private IQueryable<Interview> FilterCompanyActiveInterviews(IQueryable<Interview> query)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            return query.Where(i =>
+                !(
+                    (
+                        i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.Withdrawn &&
+                        i.Application.ApplicationDate.Date < today
+                    )
+                    ||
+                    (
+                        i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.MissingInterview &&
+                        i.Application.Interviews
+                            .OrderByDescending(x => x.InterviewDate)
+                            .Select(x => (DateTime?)x.InterviewDate.Date)
+                            .FirstOrDefault() < today
+                    )
+                    ||
+                    (
+                        (i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.Rejected ||
+                         i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.Hired) &&
+                        (
+                            (
+                                i.Application.Interviews.Any() &&
+                                i.Application.Interviews
+                                    .OrderByDescending(x => x.InterviewDate)
+                                    .Select(x => (DateTime?)x.InterviewDate.Date)
+                                    .FirstOrDefault() < today
+                            )
+                            ||
+                            (
+                                !i.Application.Interviews.Any() &&
+                                i.Application.ApplicationDate.Date < today
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
         //public async Task<ApiResponse<PaginatedResult<CompanyInterviewListItemDTO>>> GetCompanyInterviewsAsync(
         //    int employerId, CompanyInterviewsRequestDTO request)
         //{
@@ -890,6 +931,7 @@ namespace GoWork.Services.InterviewService
             // Base query: all interviews for this employer's jobs
             var baseQuery = _context.TbInterviews
                 .Where(i => i.Application.Job.EmployerId == employerId);
+            baseQuery = FilterCompanyActiveInterviews(baseQuery);
 
             // Search filter: by candidate name or job title
             if (!string.IsNullOrWhiteSpace(request.Search))
