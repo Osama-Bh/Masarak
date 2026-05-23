@@ -4,6 +4,7 @@ using GoWork.DTOs;
 using GoWork.DTOs.CompanyInterviewDTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.InterviewDTOs;
+using GoWork.Enums;
 using GoWork.Services.InterviewService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -80,6 +81,47 @@ namespace GoWork.Controllers.Dashboard
             return employer?.Id;
         }
 
+        private IQueryable<GoWork.Models.Interview> FilterCompanyActiveInterviews(IQueryable<GoWork.Models.Interview> query)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            return query.Where(i =>
+                !(
+                    (
+                        i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.Withdrawn &&
+                        i.Application.ApplicationDate.Date < today
+                    )
+                    ||
+                    (
+                        i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.MissingInterview &&
+                        i.Application.Interviews
+                            .OrderByDescending(x => x.InterviewDate)
+                            .Select(x => (DateTime?)x.InterviewDate.Date)
+                            .FirstOrDefault() < today
+                    )
+                    ||
+                    (
+                        (i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.Rejected ||
+                         i.Application.ApplicationStatusId == (int)ApplicationStatusEnum.Hired) &&
+                        (
+                            (
+                                i.Application.Interviews.Any() &&
+                                i.Application.Interviews
+                                    .OrderByDescending(x => x.InterviewDate)
+                                    .Select(x => (DateTime?)x.InterviewDate.Date)
+                                    .FirstOrDefault() < today
+                            )
+                            ||
+                            (
+                                !i.Application.Interviews.Any() &&
+                                i.Application.ApplicationDate.Date < today
+                            )
+                        )
+                    )
+                )
+            );
+        }
+
         ///// <summary>
         ///// Get paginated list of all interviews for the company's jobs.
         ///// Supports search by candidate name or job title, and filtering by status or job.
@@ -119,6 +161,35 @@ namespace GoWork.Controllers.Dashboard
                 return StatusCode(response.StatusCode, response);
 
             return Ok(response);
+        }
+
+        /// <summary>
+        /// Get statistics cards for the company's interviews page.
+        /// </summary>
+        [HttpGet("company/statistics")]
+        [Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<CompanyInterviewsStatisticsDTO>>> GetCompanyInterviewsStatistics()
+        {
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var today = DateTime.UtcNow.Date;
+            var tomorrow = today.AddDays(1);
+
+            var baseQuery = _context.TbInterviews.Where(i => i.Application.Job.EmployerId == employerId.Value);
+            baseQuery = FilterCompanyActiveInterviews(baseQuery);
+
+            var stats = new CompanyInterviewsStatisticsDTO
+            {
+                TotalInterviews = await baseQuery.CountAsync(),
+                ScheduledInterviews = await baseQuery.CountAsync(i => i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled),
+                ConfirmedInterviews = await baseQuery.CountAsync(i => i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed),
+                CompletedInterviews = await baseQuery.CountAsync(i => i.InterviewStatusId == (int)InterviewStatusEnum.Completed),
+                TodayInterviews = await baseQuery.CountAsync(i => i.InterviewDate >= today && i.InterviewDate < tomorrow)
+            };
+
+            return Ok(new ApiResponse<CompanyInterviewsStatisticsDTO>(200, stats));
         }
 
         /// <summary>

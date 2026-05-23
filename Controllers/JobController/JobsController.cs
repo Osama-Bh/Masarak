@@ -2,6 +2,7 @@ using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.JobDTOs;
+using GoWork.Enums;
 using GoWork.Services.JobService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -52,6 +53,36 @@ namespace GoWork.Controllers.JobController
         }
 
         // ==================== Job CRUD ====================
+
+        /// <summary>
+        /// Get statistics cards for the logged-in company's jobs page.
+        /// </summary>
+        [HttpGet("jobs/statistics")]
+        [Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<CompanyJobsStatisticsDTO>>> GetJobsStatistics()
+        {
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var now = DateTime.UtcNow;
+            var jobs = _context.TbJobs.Where(j => j.EmployerId == employerId.Value);
+
+            var stats = new CompanyJobsStatisticsDTO
+            {
+                TotalJobs = await jobs.CountAsync(),
+                ActiveJobs = await jobs.CountAsync(j => j.JobStatusId == (int)JobStatusEnum.Published && j.ExpirationDate >= now),
+                ExpiredJobs = await jobs.CountAsync(j =>
+                    j.JobStatusId == (int)JobStatusEnum.Closed ||
+                    j.JobStatusId == (int)JobStatusEnum.Filled ||
+                    j.JobStatusId == (int)JobStatusEnum.Expired ||
+                    j.ExpirationDate < now),
+                FullTimeJobs = await jobs.CountAsync(j => j.JobTypeId == (int)JobTypeEnum.FullTime),
+                PartTimeJobs = await jobs.CountAsync(j => j.JobTypeId == (int)JobTypeEnum.PartTime)
+            };
+
+            return Ok(new ApiResponse<CompanyJobsStatisticsDTO>(200, stats));
+        }
 
         /// <summary>
         /// Get paginated list of the logged-in company's jobs.

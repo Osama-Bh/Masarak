@@ -4,6 +4,7 @@ using GoWork.DTOs;
 using GoWork.DTOs.ApplicationDTOs;
 using GoWork.DTOs.CompanyApplicationDTOs;
 using GoWork.DTOs.DashboardDTOs;
+using GoWork.Enums;
 using GoWork.Services.ApplicationService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -94,6 +95,56 @@ namespace GoWork.Controllers.Mobile
             return employer?.Id;
         }
 
+        private IQueryable<GoWork.Models.Application> BuildCompanyApplicationsBaseQuery(int employerId)
+        {
+            return _context.TbApplications.Where(a => a.Job.EmployerId == employerId);
+        }
+
+        private IQueryable<GoWork.Models.Application> FilterCompanyHistoricalApplications(IQueryable<GoWork.Models.Application> query)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            return query.Where(a =>
+                (
+                    a.ApplicationStatusId == (int)ApplicationStatusEnum.Withdrawn &&
+                    a.ApplicationDate.Date < today
+                )
+                ||
+                (
+                    a.ApplicationStatusId == (int)ApplicationStatusEnum.MissingInterview &&
+                    a.Interviews
+                        .OrderByDescending(i => i.InterviewDate)
+                        .Select(i => (DateTime?)i.InterviewDate.Date)
+                        .FirstOrDefault() < today
+                )
+                ||
+                (
+                    (a.ApplicationStatusId == (int)ApplicationStatusEnum.Rejected ||
+                     a.ApplicationStatusId == (int)ApplicationStatusEnum.Hired) &&
+                    (
+                        (
+                            a.Interviews.Any() &&
+                            a.Interviews
+                                .OrderByDescending(i => i.InterviewDate)
+                                .Select(i => (DateTime?)i.InterviewDate.Date)
+                                .FirstOrDefault() < today
+                        )
+                        ||
+                        (
+                            !a.Interviews.Any() &&
+                            a.ApplicationDate.Date < today
+                        )
+                    )
+                )
+            );
+        }
+
+        private IQueryable<GoWork.Models.Application> FilterCompanyActiveApplications(IQueryable<GoWork.Models.Application> query)
+        {
+            var historicalQuery = FilterCompanyHistoricalApplications(query);
+            return query.Where(a => !historicalQuery.Select(h => h.Id).Contains(a.Id));
+        }
+
         /// <summary>
         /// Get paginated list of all applications for the company's jobs.
         /// </summary>
@@ -114,6 +165,34 @@ namespace GoWork.Controllers.Mobile
         }
 
         /// <summary>
+        /// Get statistics cards for the company's active applications page.
+        /// </summary>
+        [HttpGet("company/statistics")]
+        [Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<CompanyApplicationsStatisticsDTO>>> GetCompanyApplicationsStatistics()
+        {
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var baseQuery = FilterCompanyActiveApplications(BuildCompanyApplicationsBaseQuery(employerId.Value));
+            var utcNow = DateTime.UtcNow;
+            var daysSinceMonday = ((int)utcNow.DayOfWeek + 6) % 7;
+            var startOfWeek = utcNow.Date.AddDays(-daysSinceMonday);
+
+            var stats = new CompanyApplicationsStatisticsDTO
+            {
+                TotalApplications = await baseQuery.CountAsync(),
+                PendingReviewApplications = await baseQuery.CountAsync(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview),
+                ShortlistedApplications = await baseQuery.CountAsync(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted),
+                InterviewedApplications = await baseQuery.CountAsync(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.Interviewed),
+                ApplicationsThisWeek = await baseQuery.CountAsync(a => a.ApplicationDate >= startOfWeek)
+            };
+
+            return Ok(new ApiResponse<CompanyApplicationsStatisticsDTO>(200, stats));
+        }
+
+        /// <summary>
         /// Get paginated list of employment records for the company's jobs.
         /// </summary>
         [HttpGet("company/employment-records")]
@@ -129,6 +208,31 @@ namespace GoWork.Controllers.Mobile
                 return StatusCode(response.StatusCode, response);
 
             return Ok(response);
+        }
+
+        /// <summary>
+        /// Get statistics cards for the company's employment records page.
+        /// </summary>
+        [HttpGet("company/employment-records/statistics")]
+        [Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<CompanyEmploymentRecordsStatisticsDTO>>> GetCompanyEmploymentRecordsStatistics()
+        {
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var baseQuery = FilterCompanyHistoricalApplications(BuildCompanyApplicationsBaseQuery(employerId.Value));
+
+            var stats = new CompanyEmploymentRecordsStatisticsDTO
+            {
+                TotalRecords = await baseQuery.CountAsync(),
+                WithdrawnRecords = await baseQuery.CountAsync(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.Withdrawn),
+                MissingInterviewRecords = await baseQuery.CountAsync(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.MissingInterview),
+                HiredRecords = await baseQuery.CountAsync(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.Hired),
+                RejectedRecords = await baseQuery.CountAsync(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.Rejected)
+            };
+
+            return Ok(new ApiResponse<CompanyEmploymentRecordsStatisticsDTO>(200, stats));
         }
 
         /// <summary>
