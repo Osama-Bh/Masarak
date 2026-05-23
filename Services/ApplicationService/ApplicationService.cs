@@ -736,6 +736,35 @@ namespace GoWork.Services.ApplicationService
             });
         }
 
+        public async Task<ApiResponse<CompanyApplicationFiltersDTO>> GetCompanyEmploymentRecordFiltersAsync(int employerId)
+        {
+            var historicalStatusIds = new[]
+            {
+                (int)ApplicationStatusEnum.Withdrawn,
+                (int)ApplicationStatusEnum.MissingInterview,
+                (int)ApplicationStatusEnum.Hired,
+                (int)ApplicationStatusEnum.Rejected
+            };
+
+            var statuses = await _context.TbApplicationStatuses
+                .Where(s => s.IsActive && historicalStatusIds.Contains(s.Id))
+                .OrderBy(s => s.SortOrder)
+                .Select(s => new LookUpDTO { Id = s.Id, Name = s.Name })
+                .ToListAsync();
+
+            var jobs = await _context.TbJobs
+                .Where(j => j.EmployerId == employerId)
+                .OrderBy(j => j.Title)
+                .Select(j => new LookUpDTO { Id = j.Id, Name = j.Title })
+                .ToListAsync();
+
+            return new ApiResponse<CompanyApplicationFiltersDTO>(200, new CompanyApplicationFiltersDTO
+            {
+                Statuses = statuses,
+                Jobs = jobs
+            });
+        }
+
         public async Task<ApiResponse<ConfirmationResponseDTO>> RejectApplicationAsync(int employerId, int applicationId)
         {
             var application = await _context.TbApplications

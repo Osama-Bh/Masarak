@@ -131,6 +131,21 @@ namespace GoWork.Controllers.Mobile
             return Ok(response);
         }
 
+        /// <summary>
+        /// Get filter dropdown data for employment records (historical statuses + company's job titles).
+        /// </summary>
+        [HttpGet("company/employment-records/filters")]
+        [Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<CompanyApplicationFiltersDTO>>> GetCompanyEmploymentRecordFilters()
+        {
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var response = await _applicationService.GetCompanyEmploymentRecordFiltersAsync(employerId.Value);
+            return Ok(response);
+        }
+
 
         /// <summary>
         /// Get filter dropdown data (application statuses + company's job titles).
