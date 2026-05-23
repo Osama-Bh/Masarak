@@ -221,7 +221,7 @@ namespace GoWork.Services.EmailService
                     <title>Masarak Email</title>
                 </head>
 
-                <body style=""margin:0; background:#f5f5f5; padding:20px;"">
+                <body style=""margin:0; background:#f5f5f5;"">
 
                     <div style=""font-family:Tahoma,Arial,sans-serif;
                                 max-width:600px;

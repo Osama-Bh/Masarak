@@ -1283,18 +1283,33 @@ namespace GoWork.Service.AccountService
                       .اضغط على الزر أدناه للمتابعة
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <a href='{resetUrl}'
-                         style='background-color:#2563eb;
-                                color:#ffffff;
-                                padding:14px 24px;
-                                text-decoration:none;
-                                font-weight:bold;
-                                border-radius:6px;
-                                display:inline-block;'>
-                        إعادة تعيين كلمة المرور
-                      </a>
+
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:25px;
+                        margin:30px 0;
+                        text-align:center;
+                        border-radius:8px;
+                        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);'>
+
+                        <a href='{resetUrl}'
+                           style='background:linear-gradient(135deg, #01bafd 0%, #0199db 100%);
+                                  color:#ffffff;
+                                  padding:14px 14px;
+                                  text-decoration:none;
+                                  font-weight:bold;
+                                  font-size:15px;
+                                  border-radius:8px;
+                                  display:inline-block;
+                                  box-shadow:0 4px 10px rgba(1,186,253,0.25);
+                                  transition:all 0.3s ease;'>
+                            إعادة تعيين كلمة المرور
+                        </a>
+
                     </div>
+                    
 
                     <p style='color:#888; font-size:14px;'>
                       .إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان
@@ -2018,17 +2033,30 @@ namespace GoWork.Service.AccountService
                       .اضغط على الزر أدناه للمتابعة
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <a href='{resetUrl}'
-                         style='background-color:#2563eb;
-                                color:#ffffff;
-                                padding:14px 24px;
-                                text-decoration:none;
-                                font-weight:bold;
-                                border-radius:6px;
-                                display:inline-block;'>
-                        إعادة تعيين كلمة المرور
-                      </a>
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:25px;
+                        margin:30px 0;
+                        text-align:center;
+                        border-radius:8px;
+                        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);'>
+
+                        <a href='{resetUrl}'
+                           style='background:linear-gradient(135deg, #01bafd 0%, #0199db 100%);
+                                  color:#ffffff;
+                                  padding:14px 14px;
+                                  text-decoration:none;
+                                  font-weight:bold;
+                                  font-size:15px;
+                                  border-radius:8px;
+                                  display:inline-block;
+                                  box-shadow:0 4px 10px rgba(1,186,253,0.25);
+                                  transition:all 0.3s ease;'>
+                            إعادة تعيين كلمة المرور
+                        </a>
+
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
