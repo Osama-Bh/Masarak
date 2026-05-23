@@ -48,6 +48,21 @@ namespace GoWork.Controllers.Dashboard
         /// <summary>
         /// Get all feedback entries (Admin only).
         /// </summary>
+        [HttpGet("statistics")]
+        [Authorize(Roles = "Admin,SubAdmin")]
+        public async Task<ActionResult<ApiResponse<FeedbackStatisticsDTO>>> GetStatistics()
+        {
+            var response = await _feedbackService.GetFeedbackStatisticsAsync();
+
+            if (response.StatusCode != 200)
+                return StatusCode(response.StatusCode, response);
+
+            return Ok(response);
+        }
+
+        /// <summary>
+        /// Get all feedback entries (Admin only).
+        /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin,SubAdmin")]
         public async Task<ActionResult<ApiResponse<PaginatedResult<FeedbackResponseDTO>>>> GetFeedbacks(

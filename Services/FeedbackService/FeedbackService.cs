@@ -3,6 +3,7 @@ using GoWork.Data;
 using GoWork.DTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.FeedbackDTOs;
+using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.EmailService;
 using GoWork.Services.FileService;
@@ -47,6 +48,21 @@ namespace GoWork.Services.FeedbackService
 
             return new ApiResponse<ConfirmationResponseDTO>(200,
                 new ConfirmationResponseDTO { Message = "Feedback submitted successfully." });
+        }
+
+        public async Task<ApiResponse<FeedbackStatisticsDTO>> GetFeedbackStatisticsAsync()
+        {
+            var feedbacks = _context.TbFeedbacks.AsQueryable();
+
+            var stats = new FeedbackStatisticsDTO
+            {
+                ComplaintsCount = await feedbacks.CountAsync(f => f.FeedbackTypeId == (int)FeedbackTypeEnum.Complaint),
+                FeatureRequestsCount = await feedbacks.CountAsync(f => f.FeedbackTypeId == (int)FeedbackTypeEnum.FeatureRequest),
+                ReadFeedbacksCount = await feedbacks.CountAsync(f => f.IsRead),
+                UnreadFeedbacksCount = await feedbacks.CountAsync(f => !f.IsRead)
+            };
+
+            return new ApiResponse<FeedbackStatisticsDTO>(200, stats);
         }
 
         //public async Task<ApiResponse<PaginatedResult<FeedbackResponseDTO>>> GetAllFeedbacksAsync(int? feedbackTypeId = null, int pageNumber = 1, int pageSize = 10)
