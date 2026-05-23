@@ -19,6 +19,36 @@ namespace GoWork.Controllers.Dashboard
             _adminService = adminService;
         }
 
+        [HttpGet("dashboard-charts/company-status-distribution")]
+        public async Task<ActionResult<ApiResponse<ChartPieResponseDTO>>> GetCompanyStatusDistributionChart()
+        {
+            var response = await _adminService.GetAdminCompanyStatusDistributionChartAsync();
+            if (response.StatusCode != 200)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+
+            return Ok(response);
+        }
+
+        [HttpGet("dashboard-charts/company-registrations")]
+        public async Task<ActionResult<ApiResponse<AdminCompanyRegistrationsChartResponseDTO>>> GetCompanyRegistrationsChart(
+            [FromQuery] string period = "weekly")
+        {
+            if (!string.Equals(period, "weekly", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new ApiResponse<string>(400, "Only weekly period is supported."));
+            }
+
+            var response = await _adminService.GetAdminCompanyRegistrationsChartAsync();
+            if (response.StatusCode != 200)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+
+            return Ok(response);
+        }
+
         /// <summary>
         /// Get combined dashboard statistics for shared Admin/SubAdmin dashboard cards.
         /// </summary>

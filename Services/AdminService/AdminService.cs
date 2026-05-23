@@ -24,6 +24,108 @@ namespace GoWork.Services.AdminService
             _emailService = emailService;
         }
 
+        private static readonly string[] WeeklyArabicLabels =
+        {
+            "السبت",
+            "الأحد",
+            "الاثنين",
+            "الثلاثاء",
+            "الأربعاء",
+            "الخميس",
+            "الجمعة"
+        };
+
+        private static DateTime GetStartOfWeek(DateTime utcNow)
+        {
+            var daysSinceSaturday = ((int)utcNow.DayOfWeek + 1) % 7;
+            return utcNow.Date.AddDays(-daysSinceSaturday);
+        }
+
+        public async Task<ApiResponse<ChartPieResponseDTO>> GetAdminCompanyStatusDistributionChartAsync()
+        {
+            var items = new List<ChartPieItemDTO>
+            {
+                new()
+                {
+                    Key = "active",
+                    Label = "موثقة",
+                    Value = await _context.TbEmployers.CountAsync(e => e.EmployerStatusId == (int)EmployerStatusEnum.Active),
+                    Fill = "var(--chart-1)"
+                },
+                new()
+                {
+                    Key = "pending",
+                    Label = "قيد المراجعة",
+                    Value = await _context.TbEmployers.CountAsync(e => e.EmployerStatusId == (int)EmployerStatusEnum.PendingApproval),
+                    Fill = "var(--chart-2)"
+                },
+                new()
+                {
+                    Key = "rejected",
+                    Label = "مرفوضة",
+                    Value = await _context.TbEmployers.CountAsync(e => e.EmployerStatusId == (int)EmployerStatusEnum.Rejected),
+                    Fill = "var(--chart-3)"
+                },
+                new()
+                {
+                    Key = "suspended",
+                    Label = "موقوفة",
+                    Value = await _context.TbEmployers.CountAsync(e => e.EmployerStatusId == (int)EmployerStatusEnum.Suspended),
+                    Fill = "var(--chart-4)"
+                }
+            };
+
+            return new ApiResponse<ChartPieResponseDTO>(200, new ChartPieResponseDTO
+            {
+                Title = "توزيع حالات الشركة",
+                Description = "التوزيع الحالي",
+                Items = items
+            });
+        }
+
+        public async Task<ApiResponse<AdminCompanyRegistrationsChartResponseDTO>> GetAdminCompanyRegistrationsChartAsync()
+        {
+            var utcNow = DateTime.UtcNow;
+            var startOfWeek = GetStartOfWeek(utcNow);
+            var endOfWeek = startOfWeek.AddDays(7);
+
+            var employers = await _context.TbEmployers
+                .Where(e => e.CreatedAt >= startOfWeek && e.CreatedAt < endOfWeek)
+                .Select(e => new { e.CreatedAt, e.EmployerStatusId })
+                .ToListAsync();
+
+            var items = Enumerable.Range(0, 7)
+                .Select(offset =>
+                {
+                    var day = startOfWeek.AddDays(offset);
+                    var nextDay = day.AddDays(1);
+                    return new AdminCompanyRegistrationsChartPointDTO
+                    {
+                        Label = WeeklyArabicLabels[offset],
+                        CompaniesRegistered = employers.Count(e => e.CreatedAt >= day && e.CreatedAt < nextDay),
+                        PendingVerifications = employers.Count(e =>
+                            e.CreatedAt >= day &&
+                            e.CreatedAt < nextDay &&
+                            e.EmployerStatusId == (int)EmployerStatusEnum.PendingApproval)
+                    };
+                })
+                .ToList();
+
+            return new ApiResponse<AdminCompanyRegistrationsChartResponseDTO>(200, new AdminCompanyRegistrationsChartResponseDTO
+            {
+                Title = "تسجيل الشركات",
+                Description = "آخر 7 أيام",
+                Period = "weekly",
+                XKey = "label",
+                Series = new List<ChartSeriesDTO>
+                {
+                    new() { Key = "companiesRegistered", Label = "الشركات المسجلة", Color = "var(--chart-1)" },
+                    new() { Key = "pendingVerifications", Label = "طلبات التوثيق", Color = "var(--chart-2)" }
+                },
+                Items = items
+            });
+        }
+
         public async Task<ApiResponse<AdminDashboardStatisticsDTO>> GetAdminDashboardStatisticsAsync()
         {
             var utcNow = DateTime.UtcNow;
