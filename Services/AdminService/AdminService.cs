@@ -176,13 +176,47 @@ namespace GoWork.Services.AdminService
 
             var subject = "Company Status Updated";
 
-            var body = $@"
-            <p>Dear {companyName},</p>
-            <p>Your company status has been updated.</p>
-            <p><strong>New Status:</strong> {newStatus}</p>
-            ";
 
-            await _emailService.SendEmailAsync(userEmail, subject, body, companyName);
+            var content = $@"
+                <p>
+                  {companyName} :مرحبًا 
+                </p>
+
+                <p>
+                    .تم تحديث حالة شركتك بنجاح
+                </p>
+
+                <div style='
+                    background-color:#f9fafb;
+                    border-right:4px solid #02b5f1;
+                    border-left:4px solid #02b5f1;
+                    padding:15px;
+                    margin:30px 0;
+                    border-radius:8px;'>
+
+                    <p style='margin:0; font-weight:bold;'>
+                        {newStatus} : الحالة الجديدة
+                    </p>
+                </div>
+
+                <p>
+                    شكراً لاستخدامك منصة Masarak.
+                </p>";
+
+            await _emailService.SendEmailAsync(
+                userEmail,
+                subject,
+                content,
+                companyName);
+
+
+            //var body = $@"
+            //<p>Dear {companyName},</p>
+            //<p>Your company status has been updated.</p>
+            //<p><strong>New Status:</strong> {newStatus}</p>
+            //";
+
+            //await _emailService.SendEmailAsync(userEmail, subject, body, companyName);
 
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
             {

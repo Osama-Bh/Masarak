@@ -155,29 +155,29 @@ namespace GoWork.Service.AccountService
 
         //}
 
-        private static string BuildArabicTemplate(string title, string bodyContent)
-        {
-            return $@"
-            <!DOCTYPE html>
-            <html lang='ar'>
-            <head>
-              <meta charset='UTF-8'>
-            </head>
-            <body style='font-family: Arial, sans-serif; background-color:#f4f6f8; padding:20px; direction:rtl;'>
-              <div style='max-width:600px; margin:auto; background:#ffffff; padding:30px; border-radius:8px; text-align:right;'>
+        //private static string BuildArabicTemplate(string title, string bodyContent)
+        //{
+        //    return $@"
+        //    <!DOCTYPE html>
+        //    <html lang='ar'>
+        //    <head>
+        //      <meta charset='UTF-8'>
+        //    </head>
+        //    <body style='font-family: Arial, sans-serif; background-color:#f4f6f8; padding:20px; direction:rtl;'>
+        //      <div style='max-width:600px; margin:auto; background:#ffffff; padding:30px; border-radius:8px; text-align:right;'>
 
-                <h2 style='color:#333;'>{title}</h2>
+        //        <h2 style='color:#333;'>{title}</h2>
 
-                {bodyContent}
+        //        {bodyContent}
 
-                <p style='color:#aaa; font-size:12px;text-align:left; direction:ltr;'>
-                  © Masarak.
-                </p>
+        //        <p style='color:#aaa; font-size:12px;text-align:left; direction:ltr;'>
+        //          © Masarak.
+        //        </p>
 
-              </div>
-            </body>
-            </html>";
-        }
+        //      </div>
+        //    </body>
+        //    </html>";
+        //}
 
         public async Task<ApiResponse<ConfirmationResponseDTO>> CandidateRegisterAsync(CandidateRegistrationDTO registrationDTO)
         {
@@ -273,8 +273,8 @@ namespace GoWork.Service.AccountService
 
                 var content = $@"
                             <p style='color:#555;'>
-                                مرحبًا {registrationDTO.FirstName},<br/>
-                                من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني.
+                               {registrationDTO.FirstName} :مرحبًا <br/>
+                                .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
                             </p>
 
                             <div style='text-align:center; margin:30px 0;'>
@@ -291,16 +291,22 @@ namespace GoWork.Service.AccountService
                             </div>
 
                             <p style='color:#888; font-size:14px;'>
-                                هذا الرمز صالح لفترة محدودة.
+                                .هذا الرمز صالح لفترة محدودة
                             </p>
 
                             <p style='color:#888; font-size:14px;'>
-                                إذا لم تقم بإنشاء حساب في Masarak، يمكنك تجاهل هذه الرسالة بأمان.
+                               Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
                             </p>";
 
-                var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
+                //var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
 
-                await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, registrationDTO.FirstName);
+                //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, registrationDTO.FirstName);
+
+                await _emailService.SendEmailAsync(
+                user.Email,
+                "Verify Your Email",
+                content,
+                registrationDTO.FirstName);
 
                 return new ApiResponse<ConfirmationResponseDTO>(201, new ConfirmationResponseDTO
                 {
@@ -611,10 +617,6 @@ namespace GoWork.Service.AccountService
                 PhoneNumber = registrationDTO.PhoneNumber,
             };
 
-
-            
-
-
             var result = await _userManager.CreateAsync(user, registrationDTO.Password);
 
             if (!result.Succeeded)
@@ -647,35 +649,38 @@ namespace GoWork.Service.AccountService
 
             var content = $@"
                     <p style='color:#555;'>
-                      مرحبًا {registrationDTO.Name},<br/>
-                      من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني.
+                     {registrationDTO.Name} :مرحبًا<br/>
+                      .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <span style='display:inline-block; 
-                                   background-color:#2563eb; 
-                                   color:#ffffff; 
-                                   font-size:24px; 
-                                   font-weight:bold; 
-                                   padding:15px 25px; 
-                                   border-radius:6px; 
-                                   letter-spacing:4px;'>
-                        {confirmationToken}
-                      </span>
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                            {confirmationToken}
+                        </p>
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      هذا الرمز صالح لفترة محدودة.
+                      .هذا الرمز صالح لفترة محدودة
                     </p>
 
                     <p style='color:#888; font-size:14px;'>
-                      إذا لم تقم بإنشاء حساب في Masarak، يمكنك تجاهل هذه الرسالة بأمان.
+                       Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
                     </p>";
 
-            var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
+            //var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
 
 
-            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, registrationDTO.Name);
+            //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, registrationDTO.Name);
+
+            await _emailService.SendEmailAsync(user.Email,"Verify Your Email",content,registrationDTO.Name);
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
             {
                 Message = "There is a code have been sent to your email please check"
@@ -712,35 +717,43 @@ namespace GoWork.Service.AccountService
 
             var content = $@"
                     <p style='color:#555;'>
-                      مرحبًا {user.UserName},<br/>
-                      تم إنشاء حساب مدير (Admin) خاص بك بنجاح على منصة Masarak.
+                     {user.UserName} :مرحبًا<br/>
+                      تم إنشاء حساب مدير (Admin) خاص بك بنجاح على منصة .Masarak
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <span style='display:inline-block; 
-                                   background-color:#2563eb; 
-                                   color:#ffffff; 
-                                   font-size:24px; 
-                                   font-weight:bold; 
-                                   padding:15px 25px; 
-                                   border-radius:6px; 
-                                   letter-spacing:2px;'>
-                        حساب مدير مفعل
-                      </span>
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                           حساب مدير مفعل
+                        </p>
                     </div>
 
+
                     <p style='color:#888; font-size:14px;'>
-                      يمكنك الآن تسجيل الدخول والبدء في إدارة النظام والصلاحيات والمستخدمين.
+                      .يمكنك الآن تسجيل الدخول والبدء في إدارة النظام والصلاحيات والمستخدمين
                     </p>
 
                     <p style='color:#888; font-size:14px;'>
-                      يرجى الحفاظ على بيانات الدخول الخاصة بك بشكل آمن، حيث يمنحك هذا الحساب صلاحيات إدارية كاملة.
+                      .يرجى الحفاظ على بيانات الدخول الخاصة بك بشكل آمن، حيث يمنحك هذا الحساب صلاحيات إدارية كاملة
                     </p>";
 
-            var htmlBody = BuildArabicTemplate("إنشاء حساب مدير - Masarak", content);
+            //var htmlBody = BuildArabicTemplate("إنشاء حساب مدير - Masarak", content);
 
 
-            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, user.UserName);
+            //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, user.UserName);
+
+            await _emailService.SendEmailAsync(
+                user.Email,
+                "Verify Your Email",
+                content,
+                user.UserName);
 
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
             {
@@ -854,9 +867,41 @@ namespace GoWork.Service.AccountService
             if (!await _userManager.IsEmailConfirmedAsync(user))
             {
                 var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                
 
-                await _emailService.SendEmailAsync(user.Email, "Verify Your Email", $"<p>Hello {user?.UserName},</p> <p>Please use the code below to verify your email address:</p> <div style=\"font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0; text-align: center;\"> {confirmationToken} </div> <p>This code is valid for a limited time.</p> <p style=\"font-size: 12px; color: #777;\"> If you didn’t create a GoWork account, you can safely ignore this email. </p> <p>— GoWork Team</p> </div>", user.UserName);
+                var content = $@"
+                    <p>
+                       {user.UserName} :مرحبًا
+                    </p>
+
+                    <p>
+                        .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
+                    </p>
+
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                            {confirmationToken} 
+                        </p>
+                    </div>
+
+                    <p>
+                        .هذا الرمز صالح لفترة محدودة
+                    </p>";
+
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Verify Your Email",
+                    content,
+                    user.UserName);
+
+                //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", $"<p>Hello {user?.UserName},</p> <p>Please use the code below to verify your email address:</p> <div style=\"font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0; text-align: center;\"> {confirmationToken} </div> <p>This code is valid for a limited time.</p> <p style=\"font-size: 12px; color: #777;\"> If you didn’t create a GoWork account, you can safely ignore this email. </p> <p>— GoWork Team</p> </div>", user.UserName);
                 //return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
                 //{
                 //    Message = "There is a code have been sent to your email please check"
@@ -965,35 +1010,42 @@ namespace GoWork.Service.AccountService
 
                 var content = $@"
                     <p style='color:#555;'>
-                      مرحبًا {company.ComapnyName},<br/>
-                      من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني.
+                     {company.ComapnyName} :مرحبًا<br/>
+                      .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <span style='display:inline-block; 
-                                   background-color:#2563eb; 
-                                   color:#ffffff; 
-                                   font-size:24px; 
-                                   font-weight:bold; 
-                                   padding:15px 25px; 
-                                   border-radius:6px; 
-                                   letter-spacing:4px;'>
-                        {confirmationToken}
-                      </span>
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                            {confirmationToken} 
+                        </p>
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      هذا الرمز صالح لفترة محدودة.
+                      .هذا الرمز صالح لفترة محدودة
                     </p>
 
                     <p style='color:#888; font-size:14px;'>
                       إذا لم تقم بإنشاء حساب في Masarak، يمكنك تجاهل هذه الرسالة بأمان.
                     </p>";
 
-                var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
+                //var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
 
 
-                await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, company.ComapnyName);
+                //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, company.ComapnyName);
+
+                await _emailService.SendEmailAsync(
+                user.Email,
+                "Verify Your Email",
+                content,
+                company.ComapnyName);
 
                 return new ApiResponse<EmployerResponseDTO>(401, "");
             }
@@ -1058,21 +1110,22 @@ namespace GoWork.Service.AccountService
                     var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                     var content = $@"
                     <p style='color:#555;'>
-                      مرحبًا {user.UserName},<br/>
-                      من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني.
+                     {user.UserName} :مرحبًا<br/>
+                      .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <span style='display:inline-block; 
-                                   background-color:#2563eb; 
-                                   color:#ffffff; 
-                                   font-size:24px; 
-                                   font-weight:bold; 
-                                   padding:15px 25px; 
-                                   border-radius:6px; 
-                                   letter-spacing:4px;'>
-                        {confirmationToken}
-                      </span>
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                            {confirmationToken} 
+                        </p>
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
@@ -1083,8 +1136,14 @@ namespace GoWork.Service.AccountService
                       إذا لم تقم بإنشاء حساب في Masarak، يمكنك تجاهل هذه الرسالة بأمان.
                     </p>";
 
-                    var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
-                    await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, user.UserName);
+                    //var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
+                    //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, user.UserName);
+
+                    await _emailService.SendEmailAsync(
+                        user.Email,
+                        "Verify Your Email",
+                        content,
+                        user.UserName);
 
                     return new ApiResponse<EmployerResponseDTO>(401, "");
                 }
@@ -1095,35 +1154,42 @@ namespace GoWork.Service.AccountService
 
                     var content = $@"
                     <p style='color:#555;'>
-                      مرحبًا {company.ComapnyName},<br/>
-                      من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني.
+                     {company.ComapnyName} :مرحبًا<br/>
+                      .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <span style='display:inline-block; 
-                                   background-color:#2563eb; 
-                                   color:#ffffff; 
-                                   font-size:24px; 
-                                   font-weight:bold; 
-                                   padding:15px 25px; 
-                                   border-radius:6px; 
-                                   letter-spacing:4px;'>
-                        {confirmationToken}
-                      </span>
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                            {confirmationToken} 
+                        </p>
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      هذا الرمز صالح لفترة محدودة.
+                      .هذا الرمز صالح لفترة محدودة
                     </p>
 
                     <p style='color:#888; font-size:14px;'>
                       إذا لم تقم بإنشاء حساب في Masarak، يمكنك تجاهل هذه الرسالة بأمان.
                     </p>";
 
-                    var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
+                    //var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
 
 
-                    await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, company.ComapnyName);
+                    //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, company.ComapnyName);
+
+                    await _emailService.SendEmailAsync(
+                        user.Email,
+                        "Verify Your Email",
+                        content,
+                        company.ComapnyName);
 
                     return new ApiResponse<EmployerResponseDTO>(401, "");
                 }
@@ -1213,8 +1279,8 @@ namespace GoWork.Service.AccountService
 
                 content = $@"
                     <p style='color:#555;'>
-                      تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك.
-                      اضغط على الزر أدناه للمتابعة.
+                      .تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك
+                      .اضغط على الزر أدناه للمتابعة
                     </p>
 
                     <div style='text-align:center; margin:30px 0;'>
@@ -1231,15 +1297,15 @@ namespace GoWork.Service.AccountService
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.
+                      .إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان
                     </p>";
             }
             else
             {
                 content = $@"
                     <p style='color:#555;'>
-                      تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك.
-                      هذا رمز إعادة التعيين الخاص بك:
+                      .تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك
+                      :هذا رمز إعادة التعيين الخاص بك
                     </p>
 
                     <div style='text-align:center; margin:30px 0;'>
@@ -1256,14 +1322,19 @@ namespace GoWork.Service.AccountService
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.
+                      .إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان
                     </p>";
             }
 
 
-            var htmlBody = BuildArabicTemplate("إعادة تعيين كلمة المرور", content);
+            //var htmlBody = BuildArabicTemplate("إعادة تعيين كلمة المرور", content);
 
-            await _emailService.SendEmailAsync(forgetpasswordDTO.Email, "Reset Password", htmlBody);
+            //await _emailService.SendEmailAsync(forgetpasswordDTO.Email, "Reset Password", htmlBody);
+
+            await _emailService.SendEmailAsync(
+                forgetpasswordDTO.Email,
+                "Reset Password",
+                content);
 
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
             {
@@ -1832,25 +1903,27 @@ namespace GoWork.Service.AccountService
 
                     content = $@"
                     <p style='color:#555;'>
-                      مرحبًا {company.ComapnyName},<br/>
-                      من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني.
+                     {company.ComapnyName} :مرحبًا<br/>
+                      .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <span style='display:inline-block; 
-                                   background-color:#2563eb; 
-                                   color:#ffffff; 
-                                   font-size:24px; 
-                                   font-weight:bold; 
-                                   padding:15px 25px; 
-                                   border-radius:6px; 
-                                   letter-spacing:4px;'>
-                        {confirmationToken}
-                      </span>
+                    
+                    <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                            {confirmationToken} 
+                        </p>
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      هذا الرمز صالح لفترة محدودة.
+                      .هذا الرمز صالح لفترة محدودة
                     </p>
 
                     <p style='color:#888; font-size:14px;'>
@@ -1862,25 +1935,27 @@ namespace GoWork.Service.AccountService
                     // This if the user that try to resend the otp to is candidate
                     content = $@"
                     <p style='color:#555;'>
-                      مرحبًا {user.UserName},<br/>
-                      من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني.
+                      {user.UserName} :مرحبًا<br/>
+                      .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
                     </p>
 
-                    <div style='text-align:center; margin:30px 0;'>
-                      <span style='display:inline-block; 
-                                   background-color:#2563eb; 
-                                   color:#ffffff; 
-                                   font-size:24px; 
-                                   font-weight:bold; 
-                                   padding:15px 25px; 
-                                   border-radius:6px; 
-                                   letter-spacing:4px;'>
-                        {confirmationToken}
-                      </span>
+                   <div style='
+                        background-color:#f9fafb;
+                        border-right:4px solid #02b5f1;
+                        border-left:4px solid #02b5f1;
+                        padding:15px;
+                        margin:30px 0;
+                        text-align:center
+                        border-radius:8px;'>
+
+                        <p style='margin:0; font-weight:bold;'>
+                            {confirmationToken} 
+                        </p>
+                    </div>
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      هذا الرمز صالح لفترة محدودة.
+                      .هذا الرمز صالح لفترة محدودة
                     </p>
 
                     <p style='color:#888; font-size:14px;'>
@@ -1889,10 +1964,16 @@ namespace GoWork.Service.AccountService
                 }
 
 
-                var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
+                //var htmlBody = BuildArabicTemplate("تأكيد البريد الإلكتروني", content);
 
 
-                await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, company.ComapnyName);
+                //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, company.ComapnyName);
+
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Verify Your Email",
+                    content,
+                    company is not null ? company.ComapnyName : user.UserName);
 
                 return new ApiResponse<ConfirmationResponseDTO>(200,
                     new ConfirmationResponseDTO
@@ -1933,8 +2014,8 @@ namespace GoWork.Service.AccountService
 
                 var content = $@"
                     <p style='color:#555;'>
-                      تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك.
-                      اضغط على الزر أدناه للمتابعة.
+                      .تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك
+                      .اضغط على الزر أدناه للمتابعة
                     </p>
 
                     <div style='text-align:center; margin:30px 0;'>
@@ -1951,13 +2032,18 @@ namespace GoWork.Service.AccountService
                     </div>
 
                     <p style='color:#888; font-size:14px;'>
-                      إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان.
+                      .إذا لم تقم بطلب إعادة تعيين كلمة المرور، يمكنك تجاهل هذه الرسالة بأمان
                     </p>";
 
 
-                var htmlBody = BuildArabicTemplate("إعادة تعيين كلمة المرور", content);
+                //var htmlBody = BuildArabicTemplate("إعادة تعيين كلمة المرور", content);
 
-                await _emailService.SendEmailAsync(resendDto.Email, "Reset Password", htmlBody);
+                //await _emailService.SendEmailAsync(resendDto.Email, "Reset Password", htmlBody);
+
+                await _emailService.SendEmailAsync(
+                    resendDto.Email,
+                    "Reset Password",
+                    content);
 
                 return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
                 {
