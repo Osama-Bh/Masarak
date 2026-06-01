@@ -1,6 +1,10 @@
+using ECommerceApp.DTOs;
 using GoWork.Data;
+using GoWork.DTOs.DashboardDTOs;
+using GoWork.Services.AdminService;
 using GoWork.Services.NotificationService;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GoWork.Controllers
 {
@@ -16,11 +20,14 @@ namespace GoWork.Controllers
         private readonly ILogger<WeatherForecastController> _logger;
         private readonly ApplicationDbContext _context;
         private readonly INotificationService _notificationService;
-        public WeatherForecastController(ILogger<WeatherForecastController> logger, ApplicationDbContext context, INotificationService notificationService)
+        private readonly IAdminService _adminService;
+
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IAdminService adminService, ApplicationDbContext context, INotificationService notificationService)
         {
             _logger = logger;
             _context = context;
             _notificationService = notificationService;
+            _adminService = adminService;
         }
 
         // hi there 
@@ -29,6 +36,17 @@ namespace GoWork.Controllers
         {
             var applicationStatuses = string.Join(", ", _context.TbApplicationStatuses.Select(s => s.Name).ToList());
             return applicationStatuses;
+        }
+
+        [HttpGet("ApplicationStatusesDetails")]
+        public IActionResult GetApplicationStatusesDetails()
+        {
+            var applicationStatuses = _context.TbApplicationStatuses.Select(s => new
+            {
+                s.Name,
+                s.IsActive
+            }).ToList();
+            return Ok(applicationStatuses);
         }
 
         [HttpGet("InterviewStatuses")]
@@ -67,6 +85,22 @@ namespace GoWork.Controllers
             var TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Aden");
 
             return Ok(TimeZone);
+        }
+
+        [HttpPut("sub-admins/{id}")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> UpdateSubAdmin(int id, UpdateSubAdminDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("Invalid request data.");
+            }
+
+            var response = await _adminService.UpdateSubAdminAsync(id, dto);
+            if (response.StatusCode != 200)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+            return Ok(response);
         }
     }
 }

@@ -300,32 +300,36 @@ namespace GoWork.Services.AdminService
 
             var subject = "Company Status Updated";
 
-
             var content = $@"
-                <p>
-                  {companyName} :مرحبًا 
-                </p>
-
-                <p>
+              <div style=""padding: 30px; text-align: right"">
+                <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
+                  <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
+                    {companyName} :مرحبًا
+                  </h1>
+                  <p style=""color: #555"">
                     .تم تحديث حالة شركتك بنجاح
-                </p>
+                  </p>
 
-                <div style='
-                    background-color:#f9fafb;
-                    border-right:4px solid #02b5f1;
-                    border-left:4px solid #02b5f1;
-                    padding:15px;
-                    margin:30px 0;
-                    border-radius:8px;'>
+                  <div
+                    style=""
+                      background-color: #f9fafb;
+                      border-right: 4px solid #02b5f1;
+                      border-left: 4px solid #02b5f1;
+                      padding: 15px;
+                      margin: 30px 0;
+                      text-align: center;
+                      border-radius: 8px;
+                    ""
+                  >
+                    <p style=""margin: 0; font-weight: bold""> {newStatus} : الحالة الجديدة</p>
+                  </div>
 
-                    <p style='margin:0; font-weight:bold;'>
-                        {newStatus} : الحالة الجديدة
-                    </p>
-                </div>
+                  <p style=""color: #888; font-size: 14px"">
+                   شكراً لاستخدامك منصة Masarak.
+                  </p>
 
-                <p>
-                    شكراً لاستخدامك منصة Masarak.
-                </p>";
+                </div>";
+
 
             await _emailService.SendEmailAsync(
                 userEmail,

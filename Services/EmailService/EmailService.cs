@@ -213,96 +213,89 @@ namespace GoWork.Services.EmailService
         private string BuildEmailTemplate(string message)
         {
             return $@"
-                <!DOCTYPE html>
+                                <!doctype html>
                 <html lang=""ar"" dir=""rtl"">
-                <head>
-                    <meta charset=""UTF-8"">
-                    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+                  <head>
+                    <meta charset=""UTF-8"" />
+                    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
                     <title>Masarak Email</title>
-                </head>
+                  </head>
 
-                <body style=""margin:0; background:#f5f5f5;"">
-
-                    <div style=""font-family:Tahoma,Arial,sans-serif;
-                                max-width:600px;
-                                margin:auto;
-                                border:1px solid #e0e0e0;
-                                border-radius:12px;
-                                overflow:hidden;
-                                box-shadow:0 4px 15px rgba(0,0,0,0.05);
-                                background:#ffffff;"">
-
-                        <!-- Header -->
-                        <div style=""background:linear-gradient(135deg, #01bafd 0%, #0199db 100%);
-                                    padding:30px;
-                                    text-align:center;"">
-
-                            <h1 style=""color:white;
-                                       margin:0;
-                                       font-size:28px;
-                                       font-weight:700;"">
-                                Masarak.
-                            </h1>
-                        </div>
+                  <body style=""margin: 0; background: #f5f5f5"">
+                    <div
+                      style=""
+                        font-family: Tahoma, Arial, sans-serif;
+                        max-width: 600px;
+                        margin: auto;
+                        border: 1px solid #e0e0e0;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+                        background: #ffffff;
+                      ""
+                    >
+                      <!-- Header -->
+                      <div
+                        style=""
+                          background: linear-gradient(135deg, #01bafd 0%, #0199db 100%);
+                          padding: 30px;
+                          text-align: center;
+                        ""
+                      >
+                        <h1 style=""color: white; margin: 0; font-size: 28px; font-weight: 700"">
+                          Masarak.
+                        </h1>
+                      </div>
 
                         <!-- Content -->
-                        <div style=""padding:30px; text-align:right;"">
-
-                            <h2 style=""color:#1f2937;
-                                       margin-top:0;
-                                       font-size:22px;
-                                       font-weight:600;"">
-                                مرحباً
-                            </h2>
-
-                            <div style=""color:#4b5563;
-                                        line-height:1.8;
-                                        font-size:16px;"">
 
                                 {message}
+                          <!--  end content
 
-                            </div>
+                        <!-- Signature -->
+                        <div
+                          style=""
+                            margin-top: 40px;
+                            padding-top: 25px;
+                            border-top: 1px solid #f3f4f6;
+                            text-align: center;
+                          ""
+                        >
+                          <p style=""color: #9ca3af; font-size: 14px; margin: 0"">
+                            مع أطيب التحيات
+                          </p>
 
-                            <!-- Signature -->
-                            <div style=""margin-top:40px;
-                                        padding-top:25px;
-                                        border-top:1px solid #f3f4f6;
-                                        text-align:center;"">
-
-                                <p style=""color:#9ca3af;
-                                          font-size:14px;
-                                          margin:0;"">
-                                    مع أطيب التحيات
-                                </p>
-
-                                <p style=""color:#02b5f1;
-                                          font-weight:700;
-                                          font-size:18px;
-                                          margin:8px 0;"">
-                                    Masarak.
-                                </p>
-                            </div>
-
+                          <p
+                            style=""
+                              color: #02b5f1;
+                              font-weight: 700;
+                              font-size: 18px;
+                              margin: 8px 0;
+                            ""
+                          >
+                            Masarak.
+                          </p>
                         </div>
+                      </div> 
 
-                        <!-- Footer -->
-                        <div style=""background-color:#f9fafb;
-                                    padding:25px;
-                                    text-align:center;
-                                    border-top:1px solid #f3f4f6;"">
-
-                            <p style=""color:#9ca3af;
-                                      font-size:13px;
-                                      margin:0;"">
-                                © 2026 Masarak. نبني مستقبل العمل
-                            </p>
-
-                        </div>
-
+                      <!-- Footer -->
+                      <div
+                        style=""
+                          background-color: #f9fafb;
+                          padding: 25px;
+                          text-align: center;
+                          border-top: 1px solid #f3f4f6;
+                        ""
+                      >
+                        <p style=""color: #9ca3af; font-size: 13px; margin: 0"">
+                          © 2026 Masarak. نبني مستقبل العمل
+                        </p>
+                      </div>
                     </div>
-
-                </body>
-                </html>";
+                  </body>
+                </html>
+                "";
+                ";
         }
     }
 }

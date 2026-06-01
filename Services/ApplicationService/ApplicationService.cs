@@ -713,11 +713,7 @@ namespace GoWork.Services.ApplicationService
         public async Task<ApiResponse<CompanyApplicationFiltersDTO>> GetCompanyApplicationFiltersAsync(int employerId)
         {
             var statuses = await _context.TbApplicationStatuses
-                .Where(s => s.IsActive &&
-                            s.Id != (int)ApplicationStatusEnum.Withdrawn &&
-                            s.Id != (int)ApplicationStatusEnum.MissingInterview &&
-                            s.Id != (int)ApplicationStatusEnum.Rejected &&
-                            s.Id != (int)ApplicationStatusEnum.Hired)
+                .Where(s => s.IsActive)
                 .OrderBy(s => s.SortOrder)
                 .Select(s => new LookUpDTO { Id = s.Id, Name = s.Name })
                 .ToListAsync();

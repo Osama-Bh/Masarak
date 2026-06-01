@@ -1,12 +1,14 @@
 ﻿using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs;
+using GoWork.DTOs.AuthDTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.FeedbackDTOs;
 using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.EmailService;
 using GoWork.Services.FileService;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace GoWork.Services.FeedbackService
@@ -16,11 +18,13 @@ namespace GoWork.Services.FeedbackService
         private readonly ApplicationDbContext _context;
         private readonly IFileService _fileService;
         private readonly IEmailService _emailService;
-        public FeedbackService(ApplicationDbContext context, IFileService fileService,IEmailService emailService)
+        private readonly UserManager<ApplicationUser> _userManager;
+        public FeedbackService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IFileService fileService,IEmailService emailService)
         {
             _context = context;
             _fileService = fileService;
             _emailService = emailService;
+            _userManager = userManager;
         }
 
         public async Task<ApiResponse<ConfirmationResponseDTO>> SubmitFeedbackAsync(int userId, SubmitFeedbackDTO dto)
@@ -311,11 +315,53 @@ namespace GoWork.Services.FeedbackService
         {
             try
             {
-                var defaultSubject = "Response to your Feedback - GoWork";
+                var defaultSubject = "Response to your Feedback - Masarak";
+                var user = await _userManager.FindByEmailAsync(dto.Email);
+                var roles = await _userManager.GetRolesAsync(user);
+                var role = roles.FirstOrDefault() ?? "Unknown";
+                var receiverName = string.Empty;
 
-                var htmlBody = PrepareEmailBody(dto.Message);
+                if (role == "Company")
+                {
+                    var company = _context.TbEmployers.FirstOrDefault(c => c.UserId == user.Id);
+                    receiverName = company != null ? company.ComapnyName : user.UserName;
+                }
+                else
+                {
+                    var seeker = _context.TbSeekers.FirstOrDefault(s => s.UserId == user.Id);
+                    receiverName = seeker != null ? $"{seeker.FirsName} {seeker.LastName}" : user.UserName;
+                }
 
-                await _emailService.SendEmailAsync(dto.Email, defaultSubject, htmlBody);
+                var content = $@"
+                <div style=""padding: 30px; text-align: right"">
+                <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
+                    <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
+                    {receiverName} :مرحبًا
+                    </h1>
+                    <p style=""color: #555"">
+                    :شكرًا لتواصلك معنا. قمنا بمراجعة ملاحظتك بعناية، ويسعدنا أن نقدم لك الرد التالي
+                    </p>
+
+                    <div
+                    style=""
+                        background-color: #f9fafb;
+                        border-right: 4px solid #02b5f1;
+                        border-left: 4px solid #02b5f1;
+                        padding: 15px;
+                        margin: 30px 0;
+                        text-align: center;
+                        border-radius: 8px;
+                    ""
+                    >
+                    <p style=""margin: 0; font-weight: bold"">{dto.Message}</p>
+                    </div>
+                        
+                </div>";
+
+
+                //var htmlBody = PrepareEmailBody(dto.Message);
+
+                await _emailService.SendEmailAsync(dto.Email, defaultSubject, content);
 
                 return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Email sent successfully." });
             }
