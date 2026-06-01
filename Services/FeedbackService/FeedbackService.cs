@@ -336,10 +336,12 @@ namespace GoWork.Services.FeedbackService
                 <div style=""padding: 30px; text-align: right"">
                 <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                     <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                    {receiverName} :مرحبًا
+                    {receiverName} مرحبًا
                     </h1>
                     <p style=""color: #555"">
-                    :شكرًا لتواصلك معنا. قمنا بمراجعة ملاحظتك بعناية، ويسعدنا أن نقدم لك الرد التالي
+                    
+                    .شكرًا لتواصلك معنا<br/>
+                    قمنا بمراجعة ملاحظتك بعناية ويسعدنا أن نقدم لك الرد التالي
                     </p>
 
                     <div

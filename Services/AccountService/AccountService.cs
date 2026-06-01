@@ -276,7 +276,7 @@ namespace GoWork.Service.AccountService
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {registrationDTO.FirstName} :مرحبًا
+                        {registrationDTO.FirstName} مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
@@ -301,7 +301,7 @@ namespace GoWork.Service.AccountService
                       </p>
 
                       <p style=""color: #888; font-size: 14px"">
-                        Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                       إذا لم تقم بإنشاء حساب في منصة مسارك يمكنك تجاهل هذه الرسالة بأمان 
                       </p>
                     </div>";
 
@@ -658,7 +658,7 @@ namespace GoWork.Service.AccountService
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {registrationDTO.Name} :مرحبًا
+                        {registrationDTO.Name} مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
@@ -683,7 +683,7 @@ namespace GoWork.Service.AccountService
                       </p>
 
                       <p style=""color: #888; font-size: 14px"">
-                        Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                         إذا لم تقم بإنشاء حساب في منصة مسارك يمكنك تجاهل هذه الرسالة بأمان 
                       </p>
                     </div>";
 
@@ -730,13 +730,9 @@ namespace GoWork.Service.AccountService
               <div style=""padding: 30px; text-align: right"">
                 <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                   <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                    {user.UserName} :مرحبًا
-                    تم إنشاء حساب مدير (Admin) خاص بك بنجاح على منصة .Masarak   
+                    {user.Name} مرحبًا
+                    
                   </h1>
-                  <p style=""color: #555"">
-                    .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
-                  </p>
-
                   <div
                     style=""
                       background-color: #f9fafb;
@@ -748,7 +744,7 @@ namespace GoWork.Service.AccountService
                       border-radius: 8px;
                     ""
                   >
-                    <p style=""margin: 0; font-weight: bold"">حساب مدير مفعل</p>
+                    <p style=""margin: 0; font-weight: bold"">.تم إنشاء حساب مشرف فرعي خاص بك بنجاح على منصة مسارك </p>
                   </div>
 
                   <p style=""color: #888; font-size: 14px"">
@@ -756,7 +752,7 @@ namespace GoWork.Service.AccountService
                   </p>
 
                   <p style=""color: #888; font-size: 14px"">
-                   .يرجى الحفاظ على بيانات الدخول الخاصة بك بشكل آمن، حيث يمنحك هذا الحساب صلاحيات إدارية كاملة
+                   يرجى الحفاظ على بيانات الدخول الخاصة بك بشكل آمن، حيث يمنحك هذا الحساب صلاحيات إدارية كاملة
                   </p>
                 </div>";
 
@@ -888,7 +884,7 @@ namespace GoWork.Service.AccountService
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {user.UserName} :مرحبًا
+                        {user.Name} مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
@@ -1032,7 +1028,7 @@ namespace GoWork.Service.AccountService
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {company.ComapnyName} :مرحبًا
+                        {company.ComapnyName} مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
@@ -1057,7 +1053,7 @@ namespace GoWork.Service.AccountService
                       </p>
 
                       <p style='color:#888; font-size:14px;'>
-                      إذا لم تقم بإنشاء حساب في Masarak، يمكنك تجاهل هذه الرسالة بأمان.
+                      إذا لم تقم بإنشاء حساب في منصة مسارك يمكنك تجاهل هذه الرسالة بأمان 
                     </p>
                     </div>";
 
@@ -1140,7 +1136,7 @@ namespace GoWork.Service.AccountService
                       <div style=""padding: 30px; text-align: right"">
                         <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                           <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                            {user.UserName} :مرحبًا
+                            {user.Name} مرحبًا
                           </h1>
                           <p style=""color: #555"">
                             .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
@@ -1165,7 +1161,7 @@ namespace GoWork.Service.AccountService
                           </p>
 
                           <p style=""color: #888; font-size: 14px"">
-                            Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                             إذا لم تقم بإنشاء حساب في منصة مسارك يمكنك تجاهل هذه الرسالة بأمان 
                           </p>
                         </div>";
 
@@ -1191,7 +1187,7 @@ namespace GoWork.Service.AccountService
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {company.ComapnyName} :مرحبًا
+                        {company.ComapnyName} مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
@@ -1216,7 +1212,7 @@ namespace GoWork.Service.AccountService
                       </p>
 
                       <p style=""color: #888; font-size: 14px"">
-                        Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                        إذا لم تقم بإنشاء حساب في منصة مسارك يمكنك تجاهل هذه الرسالة بأمان 
                       </p>
                     </div>";
 
@@ -1317,16 +1313,17 @@ namespace GoWork.Service.AccountService
                 var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes(token));
 
                 var resetUrl = $"{_frontendBaseUrl}?email={forgetpasswordDTO.Email}&token={encodedToken}";
-
+                var company = _context.TbEmployers.FirstOrDefault(c => c.UserId == user.Id);
                 content = $@"
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {user.UserName} :مرحبًا
+                        {company.ComapnyName} مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         
-                      .تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك
+                     تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك
+                        <br/>
                       .اضغط على الزر أدناه للمتابعة
                       </p>
 
@@ -1357,11 +1354,11 @@ namespace GoWork.Service.AccountService
                       </div>
 
                       <p style=""color: #888; font-size: 14px"">
-                        .هذا الرمز صالح لفترة محدودة
+                        .هذا الرابط صالح لفترة محدودة
                       </p>
 
                       <p style=""color: #888; font-size: 14px"">
-                        Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                         إذا لم تقم بإعادة تعيين كلمة المرور يمكنك تجاهل هذه الرسالة بأمان 
                       </p>
                     </div>";
 
@@ -1376,7 +1373,7 @@ namespace GoWork.Service.AccountService
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {user.UserName} :مرحبًا
+                        {user.Name} :مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         
@@ -1403,7 +1400,7 @@ namespace GoWork.Service.AccountService
                       </p>
 
                       <p style=""color: #888; font-size: 14px"">
-                        Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                          إذا لم تقم بإعادة تعيين كلمة المرور يمكنك تجاهل هذه الرسالة بأمان 
                       </p>
                     </div>";
 
@@ -1989,7 +1986,7 @@ namespace GoWork.Service.AccountService
                       <div style=""padding: 30px; text-align: right"">
                         <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                           <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                            {company.ComapnyName} :مرحبًا
+                            {company.ComapnyName} مرحبًا
                           </h1>
                           <p style=""color: #555"">
                             .من فضلك استخدم الرمز أدناه لتأكيد بريدك الإلكتروني
@@ -2014,7 +2011,7 @@ namespace GoWork.Service.AccountService
                           </p>
 
                           <p style=""color: #888; font-size: 14px"">
-                            Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                            إذا لم تقم بإنشاء حساب في منصة مسارك يمكنك تجاهل هذه الرسالة بأمان 
                           </p>
                         </div>";
                 }
@@ -2052,7 +2049,7 @@ namespace GoWork.Service.AccountService
                           </p>
 
                           <p style=""color: #888; font-size: 14px"">
-                            Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                           إذا لم تقم بإنشاء حساب في منصة مسارك يمكنك تجاهل هذه الرسالة بأمان 
                           </p>
                         </div>";
                 }
@@ -2105,16 +2102,17 @@ namespace GoWork.Service.AccountService
                 var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes(token));
 
                 var resetUrl = $"{_frontendBaseUrl}?email={resendDto.Email}&token={encodedToken}";
+                var company = _context.TbEmployers.FirstOrDefault(c => c.UserId == user.Id);
 
                 var content = $@"
                   <div style=""padding: 30px; text-align: right"">
                     <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                       <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                        {user.UserName} :مرحبًا
+                        {company.ComapnyName} مرحبًا
                       </h1>
                       <p style=""color: #555"">
                         
-                      .تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك
+                      تلقّينا طلبًا لإعادة تعيين كلمة المرور الخاصة بحسابك
                       .اضغط على الزر أدناه للمتابعة
                       </p>
 
@@ -2145,11 +2143,11 @@ namespace GoWork.Service.AccountService
                       </div>
 
                       <p style=""color: #888; font-size: 14px"">
-                        .هذا الرمز صالح لفترة محدودة
+                        .هذا الرابط صالح لفترة محدودة
                       </p>
 
                       <p style=""color: #888; font-size: 14px"">
-                        Masarak. .إذا لم تقم بإنشاء حساب في يمكنك تجاهل هذه الرسالة بأمان
+                        إذا لم تقم بإعادة تعيين كلمة المرور يمكنك تجاهل هذه الرسالة بأمان
                       </p>
                     </div>";
 

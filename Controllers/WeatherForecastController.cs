@@ -87,15 +87,15 @@ namespace GoWork.Controllers
             return Ok(TimeZone);
         }
 
-        [HttpPut("sub-admins/{id}")]
-        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> UpdateSubAdmin(int id, UpdateSubAdminDTO dto)
+        [HttpPatch("sub-admins/{id}/status")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> UpdateSubAdminStatus(int id, UpdateSubAdminStatusDTO dto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest("Invalid request data.");
             }
 
-            var response = await _adminService.UpdateSubAdminAsync(id, dto);
+            var response = await _adminService.UpdateSubAdminStatusAsync(id, dto);
             if (response.StatusCode != 200)
             {
                 return StatusCode(response.StatusCode, response);

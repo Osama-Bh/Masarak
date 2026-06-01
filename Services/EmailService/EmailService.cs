@@ -294,8 +294,8 @@ namespace GoWork.Services.EmailService
                     </div>
                   </body>
                 </html>
-                "";
-                ";
+                "
+                ;
         }
     }
 }

@@ -304,10 +304,10 @@ namespace GoWork.Services.AdminService
               <div style=""padding: 30px; text-align: right"">
                 <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
                   <h1 style=""color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600;"" >
-                    {companyName} :مرحبًا
+                    {companyName} مرحبًا
                   </h1>
                   <p style=""color: #555"">
-                    .تم تحديث حالة شركتك بنجاح
+                    .تم تحديث حالة شركتك 
                   </p>
 
                   <div
@@ -325,7 +325,7 @@ namespace GoWork.Services.AdminService
                   </div>
 
                   <p style=""color: #888; font-size: 14px"">
-                   شكراً لاستخدامك منصة Masarak.
+                   .شكراً لاستخدامك منصة مسارك 
                   </p>
 
                 </div>";
