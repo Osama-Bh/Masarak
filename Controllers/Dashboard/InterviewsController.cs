@@ -122,28 +122,6 @@ namespace GoWork.Controllers.Dashboard
             );
         }
 
-        ///// <summary>
-        ///// Get paginated list of all interviews for the company's jobs.
-        ///// Supports search by candidate name or job title, and filtering by status or job.
-        ///// </summary>
-        //[HttpGet]
-        //public async Task<ActionResult<ApiResponse<PaginatedResult<CompanyInterviewListItemDTO>>>> GetInterviews(
-        //    [FromQuery] CompanyInterviewsRequestDTO request)
-        //{
-        //    var employerId = await GetEmployerIdAsync();
-        //    if (employerId == null)
-        //        return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
-
-        //    if (request.Page < 1) request.Page = 1;
-        //    if (request.PageSize < 1 || request.PageSize > 50) request.PageSize = 10;
-
-        //    var response = await _interviewService.GetCompanyInterviewsAsync(employerId.Value, request);
-        //    if (response.StatusCode != 200)
-        //        return StatusCode(response.StatusCode, response);
-
-        //    return Ok(response);
-        //}
-
         /// <summary>
         /// Get paginated list of all interviews for the company's jobs.
         /// </summary>

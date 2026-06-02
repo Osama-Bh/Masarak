@@ -287,7 +287,7 @@ namespace GoWork.Controllers.Auth
                         PhoneNumber = user.PhoneNumber
                     });
                 }
-                else if(role == "SubAdmin")
+                else if (role == "SubAdmin")
                 {
                     return Ok(new EmployerResponseDTO
                     {
@@ -307,7 +307,7 @@ namespace GoWork.Controllers.Auth
                 if (employer == null)
                     return NotFound("Employer profile not found.");
 
-                var logoUrlResponse =  _fileService
+                var logoUrlResponse = _fileService
                     .DownloadUrlAsync(employer.LogoUrl);
 
                 return Ok(new EmployerResponseDTO
@@ -331,50 +331,6 @@ namespace GoWork.Controllers.Auth
                 }
                 return Ok(response);
             }
-
-
-
-
-            //var user = await _userManager.GetUserAsync(User);
-            //if (user == null)
-            //    return Unauthorized();
-
-            //var roles = await _userManager.GetRolesAsync(user);
-            //var role = roles.FirstOrDefault();
-            //if (role == "Admin")
-            //{
-            //    var adminResponse = new EmployerResponseDTO
-            //    {
-            //        Email = user.Email,
-            //        Role = role,
-            //        CompanyName = "Masarak",
-            //        PhoneNumber = user.PhoneNumber
-            //    };
-
-            //    return Ok(adminResponse);
-            //}
-            //else
-            //{
-            //    var employer = await _context.TbEmployers
-            //    .FirstOrDefaultAsync(e => e.UserId == user.Id);
-
-            //    var LogoUrlRespons = _fileService.DownloadUrlAsync(employer.LogoUrl);
-
-            //    var response = new EmployerResponseDTO
-            //    {
-            //        Email = user.Email,
-            //        Role = role,
-            //        CompanyName = employer?.ComapnyName,
-            //        PhoneNumber = user.PhoneNumber,
-            //        SasUrl = LogoUrlRespons.SasUrl,
-            //        ExpiresAt = LogoUrlRespons.ExpiresAt,
-            //        Industry = employer.Industry
-            //    };
-
-            //    return Ok(response);
-            //}
-
-                
         }
 
         [HttpPost("Candidate/Register")]
@@ -423,39 +379,6 @@ namespace GoWork.Controllers.Auth
             }
             return Ok(response);
         }
-
-        //[HttpPost("Admin/VerifyEmail")]
-        //public async Task<ActionResult<ApiResponse<EmployerResponseDTO>>> VerifyAdmnEmail(EmailConfirmationDTO confirmationDTO)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest("Invalid Confirmation data.");
-        //    }
-
-        //    var response = await _accountService.VerifyAdminEmail(confirmationDTO);
-        //    if (response.StatusCode != 200)
-        //    {
-        //        return StatusCode((int)response.StatusCode, response);
-        //    }
-
-        //    // ✅ Generate JWT
-        //    var user = await _userManager.FindByEmailAsync(confirmationDTO.Email);
-        //    var token = _accountService.GenerateJwtToken(user);
-
-        //    // ✅ Inject cookie
-        //    Response.Cookies.Append("access_token", token, new CookieOptions
-        //    {
-        //        HttpOnly = true,
-        //        Secure = true,
-        //        SameSite = SameSiteMode.None,
-        //        Expires = DateTime.UtcNow.AddDays(7),
-        //        Path = "/",
-        //        Domain = ".masarak.app"
-        //    });
-
-        //    return Ok(response);
-        //}
-
 
         [HttpPost("Candidate/VerifyEmail")]
         public async Task<ActionResult<ApiResponse<CandidateResponseDTO2>>> VerifyEmail(EmailConfirmationDTO confirmationDTO)
