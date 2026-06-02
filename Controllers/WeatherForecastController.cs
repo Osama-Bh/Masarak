@@ -1,6 +1,8 @@
 using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.DashboardDTOs;
+using GoWork.Enums;
+using GoWork.Models;
 using GoWork.Services.AdminService;
 using GoWork.Services.NotificationService;
 using Microsoft.AspNetCore.Mvc;
@@ -59,7 +61,13 @@ namespace GoWork.Controllers
         [HttpPost("pushnotification")]
         public async Task<IActionResult> SendNotification()
         {
-            await _notificationService.SendTopicNotificationAsync("all", "Test Message", "Hi there");
+            //await _notificationService.SendToTopicAsync("all", "Test Message", "Hi there", NotificationTypeEnum.General);
+
+            await _notificationService.SendToTopicAsync(
+                "SoftwareEngineering_101",
+                "New Job Opportunity!",
+                $"A new frontEnd Dev position has just opened up. Tap to view details and apply!",
+                NotificationTypeEnum.JobCreated);
             return Ok();
         }
 

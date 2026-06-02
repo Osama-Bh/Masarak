@@ -1,4 +1,4 @@
-﻿using GoWork.Enums;
+using GoWork.Enums;
 using GoWork.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -42,6 +42,9 @@ namespace GoWork.Data
         public virtual DbSet<SeekerSkill> TbSeekerSkills { get; set; }
         public virtual DbSet<Skill> TbSkills { get; set; }
         public virtual DbSet<Address> TbAddresses { get; set; }
+        public virtual DbSet<Notification> TbNotifications { get; set; }
+        public virtual DbSet<UserNotification> TbUserNotifications { get; set; }
+        public virtual DbSet<DeviceToken> TbDeviceTokens { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -267,6 +270,45 @@ namespace GoWork.Data
                     NormalizedName = "COMPANY"
                 }
             );
+
+            // Notification Configuration
+            builder.Entity<Notification>(entity =>
+            {
+                entity.Property(n => n.Title).IsRequired().HasMaxLength(200);
+                entity.Property(n => n.Body).IsRequired().HasMaxLength(1000);
+                entity.Property(n => n.Topic).HasMaxLength(200);
+                entity.Property(n => n.ActionUrl).HasMaxLength(500);
+                entity.Property(n => n.ImageUrl).HasMaxLength(500);
+                entity.HasIndex(n => n.CreatedAt);
+                entity.HasIndex(n => n.Type);
+            });
+
+            // UserNotification Configuration
+            builder.Entity<UserNotification>(entity =>
+            {
+                entity.HasIndex(un => new { un.UserId, un.IsHidden, un.IsRead });
+                entity.HasOne(un => un.Notification)
+                      .WithMany(n => n.UserNotifications)
+                      .HasForeignKey(un => un.NotificationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(un => un.User)
+                      .WithMany(u => u.UserNotifications)
+                      .HasForeignKey(un => un.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // DeviceToken Configuration
+            builder.Entity<DeviceToken>(entity =>
+            {
+                entity.Property(dt => dt.Token).IsRequired().HasMaxLength(500);
+                entity.Property(dt => dt.DeviceType).IsRequired().HasMaxLength(50);
+                entity.HasIndex(dt => dt.Token).IsUnique();
+                entity.HasIndex(dt => dt.UserId);
+                entity.HasOne(dt => dt.User)
+                      .WithMany(u => u.DeviceTokens)
+                      .HasForeignKey(dt => dt.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
         }
 
         

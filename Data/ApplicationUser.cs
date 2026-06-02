@@ -1,4 +1,4 @@
-﻿using GoWork.Models;
+using GoWork.Models;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json.Serialization;
 
@@ -12,6 +12,12 @@ namespace GoWork.Data
         public Employer? Employer { get; set; }
         [JsonIgnore]
         public ICollection<Feedback>? Feedbacks { get; set; }
+
+        [JsonIgnore]
+        public ICollection<UserNotification>? UserNotifications { get; set; }
+
+        [JsonIgnore]
+        public ICollection<DeviceToken>? DeviceTokens { get; set; }
 
         public string? Name { get; set; }
 

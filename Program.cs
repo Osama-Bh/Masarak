@@ -13,6 +13,7 @@ using GoWork.Services.FeedbackService;
 using GoWork.Services.FileService;
 using GoWork.Services.InterviewService;
 using GoWork.Services.NotificationService;
+using GoWork.Services.FirebaseNotificationSender;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -144,6 +145,7 @@ namespace GoWork
             builder.Services.AddScoped<IInterviewService, InterviewService>();
             builder.Services.AddScoped<IFeedbackService, FeedbackService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<IFirebaseNotificationSender, FirebaseNotificationSender>();
             builder.Services.AddScoped<IAuthorizationHandler, ApplicationAuthorizationHandler>();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddScoped<IAuthorizationHandler, InterviewAuthorizationHandler>();

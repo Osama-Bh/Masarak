@@ -197,12 +197,16 @@ namespace GoWork.Services.JobService
             await HandleJobSkillsAsync(job.Id, dto.SkillIds, dto.NewSkills);
 
             // Send Notification
-            var topic = $"category_{dto.CategoryId}";
-            var data = new Dictionary<string, string>
-            {
-                { "JobId", job.Id.ToString() }
-            };
-            await _notificationService.SendTopicNotificationAsync(topic, "New Job Opportunity!", $"A new '{job.Title}' position has just opened up. Tap to view details and apply!", data);
+            var category = await _context.TbCategories.FindAsync(dto.CategoryId);
+            var categoryName = category?.Name ?? "category";
+            var topic = $"{categoryName}_{dto.CategoryId}";
+
+            await _notificationService.SendToTopicAsync(
+                topic,
+                "New Job Opportunity!",
+                $"A new {job.Title} position has just opened up. Tap to view details and apply!",
+                NotificationTypeEnum.JobCreated,
+                actionUrl: $"/jobs/{job.Id}");
 
             return new ApiResponse<ConfirmationResponseDTO>(201, new ConfirmationResponseDTO
             {
