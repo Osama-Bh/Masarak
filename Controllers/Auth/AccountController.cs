@@ -319,7 +319,8 @@ namespace GoWork.Controllers.Auth
                     SasUrl = logoUrlResponse.SasUrl,
                     ExpiresAt = logoUrlResponse.ExpiresAt,
                     Industry = employer.Industry,
-                    Status = employer.EmployerStatus.Name
+                    Status = employer.EmployerStatus.Name,
+                    EmployerId = employer.Id,
                 });
             }
             else
