@@ -1257,14 +1257,15 @@ namespace GoWork.Service.AccountService
             else
             {
                 // For other roles, return minimal info without company details
-                return new ApiResponse<EmployerResponseDTO>(200, new EmployerResponseDTO
-                {
-                    EmployerId = user.Id, // or null if your DTO supports it
-                    Email = user.Email,
-                    Role = role,
-                    PhoneNumber = user.PhoneNumber,
-                    Name = "Masarak",
-                });
+                //return new ApiResponse<EmployerResponseDTO>(200, new EmployerResponseDTO
+                //{
+                //    EmployerId = user.Id, // or null if your DTO supports it
+                //    Email = user.Email,
+                //    Role = role,
+                //    PhoneNumber = user.PhoneNumber,
+                //    Name = "Masarak",
+                //});
+                return new ApiResponse<EmployerResponseDTO>(404, "Invalid Credintials.");
             }
 
         }
