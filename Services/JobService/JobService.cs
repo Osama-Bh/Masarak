@@ -6,6 +6,7 @@ using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.FileService;
 using GoWork.Services.NotificationService;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using OpenAI.Chat;
@@ -30,7 +31,27 @@ namespace GoWork.Services.JobService
             _notificationService = notificationService;
         }
 
+        
         // ==================== Job CRUD ====================
+
+        public async Task<ApiResponse<CompanyJobsStatisticsDTO>> GetJobsStatisticsAsync(int employerId)
+        {
+            var now = DateTime.UtcNow;
+            var jobs = _context.TbJobs.Where(j => j.EmployerId == employerId);
+
+            var stats = new CompanyJobsStatisticsDTO
+            {
+                TotalJobs = await jobs.CountAsync(),
+                ActiveJobs = await jobs.CountAsync(j => j.JobStatusId == (int)JobStatusEnum.Published && j.ExpirationDate >= now),
+                ExpiredJobs = await jobs.CountAsync(j =>
+                    j.JobStatusId == (int)JobStatusEnum.Expired ||
+                    j.ExpirationDate < now),
+                FullTimeJobs = await jobs.CountAsync(j => j.JobTypeId == (int)JobTypeEnum.FullTime),
+                PartTimeJobs = await jobs.CountAsync(j => j.JobTypeId == (int)JobTypeEnum.PartTime)
+            };
+
+            return new ApiResponse<CompanyJobsStatisticsDTO>(200, stats);
+        }
 
         public async Task<ApiResponse<PaginatedResult<JobListItemDTO>>> GetJobsAsync(
             int employerId, int page, int pageSize, string? search, string? status, int? jobTypeId)

@@ -7,6 +7,8 @@ namespace GoWork.Services.JobService
     public interface IJobService
     {
         // Job CRUD
+        Task<ApiResponse<CompanyJobsStatisticsDTO>> GetJobsStatisticsAsync(int employerId);
+
         Task<ApiResponse<PaginatedResult<JobListItemDTO>>> GetJobsAsync(
             int employerId, int page, int pageSize, string? search, string? status, int? jobTypeId);
 

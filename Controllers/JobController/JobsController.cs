@@ -65,23 +65,14 @@ namespace GoWork.Controllers.JobController
             if (employerId == null)
                 return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
 
-            var now = DateTime.UtcNow;
-            var jobs = _context.TbJobs.Where(j => j.EmployerId == employerId.Value);
+            var response = await _jobService.GetJobsStatisticsAsync(employerId.Value);
 
-            var stats = new CompanyJobsStatisticsDTO
+            if (response.StatusCode != 200)
             {
-                TotalJobs = await jobs.CountAsync(),
-                ActiveJobs = await jobs.CountAsync(j => j.JobStatusId == (int)JobStatusEnum.Published && j.ExpirationDate >= now),
-                ExpiredJobs = await jobs.CountAsync(j =>
-                    j.JobStatusId == (int)JobStatusEnum.Closed ||
-                    j.JobStatusId == (int)JobStatusEnum.Filled ||
-                    j.JobStatusId == (int)JobStatusEnum.Expired ||
-                    j.ExpirationDate < now),
-                FullTimeJobs = await jobs.CountAsync(j => j.JobTypeId == (int)JobTypeEnum.FullTime),
-                PartTimeJobs = await jobs.CountAsync(j => j.JobTypeId == (int)JobTypeEnum.PartTime)
-            };
+                return StatusCode(response.StatusCode, response);
+            }
 
-            return Ok(new ApiResponse<CompanyJobsStatisticsDTO>(200, stats));
+            return Ok(response);
         }
 
         /// <summary>
