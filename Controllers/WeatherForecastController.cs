@@ -4,7 +4,10 @@ using GoWork.DTOs.DashboardDTOs;
 using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.AdminService;
+using GoWork.Services.JobService;
 using GoWork.Services.NotificationService;
+using Hangfire;
+using GoWork.Infrastructure.Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +33,16 @@ namespace GoWork.Controllers
             _context = context;
             _notificationService = notificationService;
             _adminService = adminService;
+        }
+
+        [HttpPost("hangfire")]
+        public IActionResult TestHangfire()
+        {
+            BackgroundJob.Schedule<JobExpirationService>(
+                s => s.SayHello(),
+                TimeSpan.FromSeconds(30));
+
+            return Ok("Job scheduled");
         }
 
         // hi there 

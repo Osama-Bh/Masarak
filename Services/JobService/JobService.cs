@@ -6,6 +6,8 @@ using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.FileService;
 using GoWork.Services.NotificationService;
+using Hangfire;
+using GoWork.Infrastructure.Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -190,6 +192,13 @@ namespace GoWork.Services.JobService
                 CountryId = dto.CountryId,
                 GovernateId = dto.GovernateId
             };
+
+            var EpirationAtUTC =
+                new DateTimeOffset(
+                    dto.ExpirationDate,
+                    TimeSpan.FromHours(3))
+                .UtcDateTime;
+
             _context.TbAddresses.Add(address);
             await _context.SaveChangesAsync();
 
@@ -208,10 +217,21 @@ namespace GoWork.Services.JobService
                 MaxSalary = dto.MaxSalary,
                 CurrencyId = dto.CurrencyId,
                 PostedDate = DateTime.UtcNow,
-                ExpirationDate = dto.ExpirationDate,
+                ExpirationDate = EpirationAtUTC,
                 JobStatusId = (int)JobStatusEnum.Published
             };
             _context.TbJobs.Add(job);
+            await _context.SaveChangesAsync();
+
+            // job.ExpirationDate actually stored in UTC, so safe to use directly
+            var delay = job.ExpirationDate - DateTime.UtcNow;
+
+            var hangfireJobId =
+                BackgroundJob.Schedule<JobExpirationService>(
+                    service => service.ExpireJob(job.Id),
+                    delay);
+
+            job.ExpirationHangfireJobId = hangfireJobId;
             await _context.SaveChangesAsync();
 
             // Handle skills
@@ -254,7 +274,28 @@ namespace GoWork.Services.JobService
             if (dto.MaxSalary.HasValue) job.MaxSalary = dto.MaxSalary.Value;
             if (dto.ExpirationDate.HasValue)
             {
-                job.ExpirationDate = dto.ExpirationDate.Value;
+
+                var EpirationAtUTC =
+                    new DateTimeOffset(
+                        dto.ExpirationDate.Value,
+                        TimeSpan.FromHours(3))
+                    .UtcDateTime;
+
+                job.ExpirationDate = EpirationAtUTC;
+
+                if (!string.IsNullOrEmpty(job.ExpirationHangfireJobId))
+                {
+                    BackgroundJob.Delete(job.ExpirationHangfireJobId);
+                }
+
+                var delay = job.ExpirationDate - DateTime.UtcNow;
+
+                var newHangfireJobId =
+                    BackgroundJob.Schedule<JobExpirationService>(
+                        service => service.ExpireJob(job.Id),
+                        delay);
+
+                job.ExpirationHangfireJobId = newHangfireJobId;
 
                 // Auto-republish if the job was previously expired and the new date is in the future
                 if (job.JobStatusId == (int)JobStatusEnum.Expired && job.ExpirationDate >= DateTime.UtcNow)

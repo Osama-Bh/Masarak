@@ -28,6 +28,7 @@ namespace GoWork.Models
         public DateTime PostedDate { get; set; }
         public DateTime ExpirationDate { get; set; }
         public int JobStatusId { get; set; }
+        public string? ExpirationHangfireJobId { get; set; }
 
         // Navigation properties
         [ForeignKey("EmployerId")]

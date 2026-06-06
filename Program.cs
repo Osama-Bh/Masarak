@@ -11,9 +11,12 @@ using GoWork.Services.CurrentUserService;
 using GoWork.Services.EmailService;
 using GoWork.Services.FeedbackService;
 using GoWork.Services.FileService;
-using GoWork.Services.InterviewService;
-using GoWork.Services.NotificationService;
 using GoWork.Services.FirebaseNotificationSender;
+using GoWork.Services.InterviewService;
+using GoWork.Services.JobService;
+using GoWork.Services.NotificationService;
+using Hangfire;
+using GoWork.Infrastructure.Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -85,6 +88,12 @@ namespace GoWork
             builder.Services.AddSwaggerGen();
             #endregion
 
+            //Hangfire configuration
+            builder.Services.AddHangfire(config =>
+            config.UseSqlServerStorage(
+                builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            builder.Services.AddHangfireServer();
 
             // ================================
             // Cookie settings (VERY IMPORTANT)
@@ -150,6 +159,7 @@ namespace GoWork
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
             builder.Services.AddScoped<IAuthorizationHandler, InterviewAuthorizationHandler>();
             builder.Services.AddHttpContextAccessor();
+            builder.Services.AddScoped<JobExpirationService>();
             #endregion
 
             builder.Services.AddAuthorization(options =>
@@ -212,6 +222,18 @@ namespace GoWork
             app.UseAuthentication();
 
             app.UseAuthorization();
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseHangfireDashboard();
+            }
+            else
+            {
+                app.UseHangfireDashboard("/hangfire", new DashboardOptions
+                {
+                    Authorization = new[] { new HangfireAuthorizationFilter() }
+                });
+            }
 
             app.MapControllers();
 
