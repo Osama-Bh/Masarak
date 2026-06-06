@@ -1039,7 +1039,7 @@ namespace GoWork.Services.JobService
 
         public async Task<ApiResponse<JobSearchResponseDto>> SearchJobsAsync(JobSearchRequestDto request)
         {
-            var query = _context.TbJobs.AsNoTracking().Where(j => j.JobStatusId == (int)JobStatusEnum.Published);
+            var query = _context.TbJobs.AsNoTracking().Where(j => j.JobStatusId == (int)JobStatusEnum.Published && j.ExpirationDate < DateTime.UtcNow);
 
             bool noFilters = string.IsNullOrWhiteSpace(request.Search) &&
                              request.CategoryId == null &&
@@ -1099,7 +1099,7 @@ namespace GoWork.Services.JobService
             if (request.PageSize < 1 || request.PageSize > 50) request.PageSize = 30;
 
             int totalCount = await query.CountAsync();
-            
+
             var pagedJobs = await query
                 .Skip((request.Page - 1) * request.PageSize)
                 .Take(request.PageSize)

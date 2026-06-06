@@ -93,7 +93,10 @@ namespace GoWork
             config.UseSqlServerStorage(
                 builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            builder.Services.AddHangfireServer();
+            if (!builder.Environment.IsDevelopment())
+            {
+                builder.Services.AddHangfireServer();
+            }
 
             // ================================
             // Cookie settings (VERY IMPORTANT)
@@ -160,6 +163,7 @@ namespace GoWork
             builder.Services.AddScoped<IAuthorizationHandler, InterviewAuthorizationHandler>();
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<JobExpirationService>();
+            builder.Services.AddScoped<JobMaintenanceService>();
             #endregion
 
             builder.Services.AddAuthorization(options =>
@@ -235,7 +239,14 @@ namespace GoWork
                 });
             }
 
-            app.MapControllers();
+            // Hangfire recurring jobs
+            //if (!app.Environment.IsDevelopment())
+            //{
+                RecurringJob.AddOrUpdate<JobMaintenanceService>(
+                    "expire-missed-jobs",
+                    service => service.ExpireMissedJobs(),
+                    Cron.Hourly);
+            //}
 
             //app.UseRateLimiter();
 
