@@ -93,10 +93,10 @@ namespace GoWork
             config.UseSqlServerStorage(
                 builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            if (!builder.Environment.IsDevelopment())
-            {
+            //if (!builder.Environment.IsDevelopment())
+            //{
                 builder.Services.AddHangfireServer();
-            }
+            //}
 
             // ================================
             // Cookie settings (VERY IMPORTANT)
