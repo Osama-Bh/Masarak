@@ -4,6 +4,7 @@ using Google.Apis.Auth.OAuth2;
 using GoWork.Authorization.Handlers;
 using GoWork.Authorization.Requirements;
 using GoWork.Data;
+using GoWork.Infrastructure.Hangfire;
 using GoWork.Service.AccountService;
 using GoWork.Services.AdminService;
 using GoWork.Services.ApplicationService;
@@ -16,7 +17,7 @@ using GoWork.Services.InterviewService;
 using GoWork.Services.JobService;
 using GoWork.Services.NotificationService;
 using Hangfire;
-using GoWork.Infrastructure.Hangfire;
+using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -227,7 +228,11 @@ namespace GoWork
 
             app.UseAuthorization();
 
-            app.UseHangfireDashboard("/hangfire");
+            app.UseHangfireDashboard("/hangfire",
+                new DashboardOptions
+                {
+                    Authorization = Array.Empty<IDashboardAuthorizationFilter>()
+                });
 
             // Hangfire recurring jobs
             if (!app.Environment.IsDevelopment())
