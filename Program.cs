@@ -223,14 +223,11 @@ namespace GoWork
 
             app.UseCors("GoWorkApiCorePolicy");
 
-            app.UseHangfireDashboard("/hangfire");
-
             app.UseAuthentication();
 
             app.UseAuthorization();
 
-            
-           
+            app.UseHangfireDashboard("/hangfire");
 
             // Hangfire recurring jobs
             if (!app.Environment.IsDevelopment())
