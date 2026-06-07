@@ -233,7 +233,7 @@ namespace GoWork
             }
             else
             {
-                app.UseHangfireDashboard("/hangfire", new DashboardOptions
+                app.UseHangfireDashboard($"{app.Configuration["Frontend:BaseUrl2"]}/hangfire", new DashboardOptions
                 {
                     Authorization = new[] { new HangfireAuthorizationFilter() }
                 });
