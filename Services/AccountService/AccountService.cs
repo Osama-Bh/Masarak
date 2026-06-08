@@ -510,21 +510,39 @@ namespace GoWork.Service.AccountService
             if (candidate.ResumeUrl is not null)
                 lstFillsDTO.Add(_fileService.DownloadUrlAsync(candidate.ResumeUrl));
 
+            FileDownloadDto? profilePhotoDto = null;
+            FileDownloadDto? resumeDto = null;
+
+            if (candidate.ProfilePhoto is not null)
+            {
+                profilePhotoDto =
+                    _fileService.DownloadUrlAsync(candidate.ProfilePhoto);
+            }
+
+            if (candidate.ResumeUrl is not null)
+            {
+                resumeDto =
+                    _fileService.DownloadUrlAsync(candidate.ResumeUrl);
+            }
+
             return new ApiResponse<CandidateResponseDTO>(200, new CandidateResponseDTO
             {
                 FirstName = candidate.FirsName,
                 MiddleName = string.IsNullOrEmpty(candidate.MiddleName) ? null : candidate.MiddleName,
                 LastName = candidate.LastName,
-                PhoneNo = candidate.ApplicationUser.PhoneNumber != null ? candidate.ApplicationUser.PhoneNumber : "",
-                InterestedInCategory = candidate.InterestCategory != null ? candidate.InterestCategory.Name : "",
-                ProfilPhotoUrl = lstFillsDTO[0] is null ? null : lstFillsDTO[0].SasUrl,
-                PictureExpirationDate = lstFillsDTO[0] is null ? null : lstFillsDTO[0].ExpiresAt,
-                ResumeUrl = lstFillsDTO[1] is null ? null : lstFillsDTO[1].SasUrl,
-                ResumeExpirationDate = lstFillsDTO[1] is null ? null : lstFillsDTO[1].ExpiresAt,
+                PhoneNo = candidate.ApplicationUser.PhoneNumber ?? "",
+                InterestedInCategory = candidate.InterestCategory?.Name ?? "",
+
+                ProfilPhotoUrl = profilePhotoDto?.SasUrl,
+                PictureExpirationDate = profilePhotoDto?.ExpiresAt,
+
+                ResumeUrl = resumeDto?.SasUrl,
+                ResumeExpirationDate = resumeDto?.ExpiresAt,
+
                 Skills = candidate.SeekerSkills?
-                    .Where(cs => cs.Skill != null)
-                    .Select(cs => cs.Skill!.Name)
-                    .ToList() ?? new List<string>()
+                .Where(cs => cs.Skill != null)
+                .Select(cs => cs.Skill!.Name)
+                .ToList() ?? new List<string>()
             });
         }
 

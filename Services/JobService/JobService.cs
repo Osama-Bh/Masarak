@@ -193,12 +193,6 @@ namespace GoWork.Services.JobService
                 GovernateId = dto.GovernateId
             };
 
-            var EpirationAtUTC =
-                new DateTimeOffset(
-                    dto.ExpirationDate,
-                    TimeSpan.FromHours(3))
-                .UtcDateTime;
-
             _context.TbAddresses.Add(address);
             await _context.SaveChangesAsync();
 
@@ -217,7 +211,7 @@ namespace GoWork.Services.JobService
                 MaxSalary = dto.MaxSalary,
                 CurrencyId = dto.CurrencyId,
                 PostedDate = DateTime.UtcNow,
-                ExpirationDate = EpirationAtUTC,
+                ExpirationDate = dto.ExpirationDate,
                 JobStatusId = (int)JobStatusEnum.Published
             };
             _context.TbJobs.Add(job);
@@ -275,13 +269,7 @@ namespace GoWork.Services.JobService
             if (dto.ExpirationDate.HasValue)
             {
 
-                var EpirationAtUTC =
-                    new DateTimeOffset(
-                        dto.ExpirationDate.Value,
-                        TimeSpan.FromHours(3))
-                    .UtcDateTime;
-
-                job.ExpirationDate = EpirationAtUTC;
+                job.ExpirationDate = dto.ExpirationDate.Value;
 
                 if (!string.IsNullOrEmpty(job.ExpirationHangfireJobId))
                 {
@@ -289,6 +277,7 @@ namespace GoWork.Services.JobService
                 }
 
                 var delay = job.ExpirationDate - DateTime.UtcNow;
+
 
                 var newHangfireJobId =
                     BackgroundJob.Schedule<JobExpirationService>(
