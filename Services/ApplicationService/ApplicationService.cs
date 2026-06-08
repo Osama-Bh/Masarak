@@ -12,6 +12,8 @@ using GoWork.Services.FileService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using GoWork.Infrastructure.Hangfire;
 
 namespace GoWork.Services.ApplicationService
 {
@@ -546,6 +548,14 @@ namespace GoWork.Services.ApplicationService
             // Update application status to Shortlisted
             application.ApplicationStatusId = (int)ApplicationStatusEnum.Shortlisted;
 
+            await _context.SaveChangesAsync();
+
+            var delay = utcInterviewDate - DateTime.UtcNow;
+            var hangfireJobId = BackgroundJob.Schedule<InterviewExpirationService>(
+                service => service.ExpireInterview(interview.Id),
+                delay);
+
+            interview.ExpirationHangfireJobId = hangfireJobId;
             await _context.SaveChangesAsync();
 
             return new ApiResponse<ConfirmationResponseDTO>(200,

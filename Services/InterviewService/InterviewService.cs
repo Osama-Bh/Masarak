@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using GoWork.Infrastructure.Hangfire;
 
 namespace GoWork.Services.InterviewService
 {
@@ -478,6 +480,13 @@ namespace GoWork.Services.InterviewService
             // Cancel the interview
             interview.InterviewStatusId = (int)InterviewStatusEnum.Cancelled;
 
+            // Delete Hangfire job if it exists
+            if (!string.IsNullOrEmpty(interview.ExpirationHangfireJobId))
+            {
+                BackgroundJob.Delete(interview.ExpirationHangfireJobId);
+                interview.ExpirationHangfireJobId = null;
+            }
+
             // Per workflow: cancelling an interview rejects the application
             interview.Application.ApplicationStatusId = (int)ApplicationStatusEnum.Rejected;
 
@@ -575,6 +584,18 @@ namespace GoWork.Services.InterviewService
 
             // Keep status as Scheduled (candidate must re-confirm)
             interview.InterviewStatusId = (int)InterviewStatusEnum.Scheduled;
+
+            if (!string.IsNullOrEmpty(interview.ExpirationHangfireJobId))
+            {
+                BackgroundJob.Delete(interview.ExpirationHangfireJobId);
+            }
+
+            var delay = utcInterviewDate - DateTime.UtcNow;
+            var newHangfireJobId = BackgroundJob.Schedule<InterviewExpirationService>(
+                service => service.ExpireInterview(interview.Id),
+                delay);
+
+            interview.ExpirationHangfireJobId = newHangfireJobId;
 
             await _context.SaveChangesAsync();
 

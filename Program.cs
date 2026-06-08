@@ -164,6 +164,7 @@ namespace GoWork
             builder.Services.AddScoped<IAuthorizationHandler, InterviewAuthorizationHandler>();
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<JobExpirationService>();
+            builder.Services.AddScoped<InterviewExpirationService>();
             builder.Services.AddScoped<JobMaintenanceService>();
             #endregion
 

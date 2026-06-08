@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GoWork.Models
@@ -23,6 +23,7 @@ namespace GoWork.Models
         public DateTime? RespondedAt { get; set; }
         public int InterviewStatusId { get; set; }
         public InterviewStatus InterviewStatus { get; set; }
+        public string? ExpirationHangfireJobId { get; set; }
 
     }
 }
