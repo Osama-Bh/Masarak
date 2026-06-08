@@ -241,25 +241,25 @@ namespace GoWork.Services.InterviewService
         {
             var now = DateTime.UtcNow;
 
-            // Auto-update past interviews to MissingInterview
-            var pastInterviews = await _context.TbInterviews
-                .Include(i => i.Application)
-                .Where(i => i.Application.Job.EmployerId == employerId &&
-                            (i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled || 
-                             i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed ||
-                             i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled) &&
-                            i.InterviewDate < now)
-                .ToListAsync();
+            //// Auto-update past interviews to MissingInterview
+            //var pastInterviews = await _context.TbInterviews
+            //    .Include(i => i.Application)
+            //    .Where(i => i.Application.Job.EmployerId == employerId &&
+            //                (i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled || 
+            //                 i.InterviewStatusId == (int)InterviewStatusEnum.Confirmed ||
+            //                 i.InterviewStatusId == (int)InterviewStatusEnum.Rescheduled) &&
+            //                i.InterviewDate < now)
+            //    .ToListAsync();
 
-            if (pastInterviews.Any())
-            {
-                foreach (var interview in pastInterviews)
-                {
-                    interview.InterviewStatusId = (int)InterviewStatusEnum.Withdrawn;
-                    interview.Application.ApplicationStatusId = (int)ApplicationStatusEnum.Withdrawn;
-                }
-                await _context.SaveChangesAsync();
-            }
+            //if (pastInterviews.Any())
+            //{
+            //    foreach (var interview in pastInterviews)
+            //    {
+            //        interview.InterviewStatusId = (int)InterviewStatusEnum.Withdrawn;
+            //        interview.Application.ApplicationStatusId = (int)ApplicationStatusEnum.Withdrawn;
+            //    }
+            //    await _context.SaveChangesAsync();
+            //}
 
             // Base query: all interviews for this employer's jobs
             var baseQuery = _context.TbInterviews
