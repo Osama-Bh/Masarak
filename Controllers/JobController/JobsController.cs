@@ -2,6 +2,7 @@ using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.JobDTOs;
+using GoWork.DTOs.CompanyApplicationDTOs;
 using GoWork.Enums;
 using GoWork.Services.JobService;
 using Microsoft.AspNetCore.Authorization;
@@ -268,6 +269,30 @@ namespace GoWork.Controllers.JobController
             {
                 return StatusCode(response.StatusCode, response);
             }
+            return Ok(response);
+        }
+
+        // ==================== Job Applicants ====================
+
+        /// <summary>
+        /// Get paginated list of applicants for a specific job.
+        /// </summary>
+        [HttpGet("{jobId}/applicants")]
+        [Authorize(Roles = "Company,Admin")]
+        public async Task<ActionResult<ApiResponse<PaginatedResult<JobApplicantDTO>>>> GetJobApplicants(
+            int jobId, [FromQuery] CompanyApplicationsRequestDTO request)
+        {
+            var employerId = await GetEmployerIdAsync();
+            if (employerId == null)
+                return Unauthorized(new ApiResponse<string>(401, "Company profile not found."));
+
+            var response = await _jobService.GetJobApplicantsAsync(employerId.Value, jobId, request);
+            
+            if (response.StatusCode != 200)
+            {
+                return StatusCode(response.StatusCode, response);
+            }
+
             return Ok(response);
         }
 

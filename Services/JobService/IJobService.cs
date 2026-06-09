@@ -1,6 +1,7 @@
 using ECommerceApp.DTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.JobDTOs;
+using GoWork.DTOs.CompanyApplicationDTOs;
 
 namespace GoWork.Services.JobService
 {
@@ -31,6 +32,8 @@ namespace GoWork.Services.JobService
         Task<ApiResponse<JobDetailsDto>> GetJobDetailsAsync(int jobId, int? seekerId);
 
         Task<ApiResponse<ApplicationResultDto>> ApplyToJobAsync(int jobId, int seekerId);
+
+        Task<ApiResponse<PaginatedResult<JobApplicantDTO>>> GetJobApplicantsAsync(int employerId, int jobId, CompanyApplicationsRequestDTO request);
 
         // Lookups
         Task<ApiResponse<List<LookupDTO>>> GetCategoriesAsync(string? search);
