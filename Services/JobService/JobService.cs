@@ -2,6 +2,7 @@ using ECommerceApp.DTOs;
 using GoWork.Data;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.DTOs.JobDTOs;
+using GoWork.DTOs.CompanyApplicationDTOs;
 using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.FileService;
@@ -759,6 +760,61 @@ namespace GoWork.Services.JobService
 
         //    return 10; // Fallback to pass to avoid blocking users on technical errors
         //}
+
+
+        public async Task<ApiResponse<PaginatedResult<JobApplicantDTO>>> GetJobApplicantsAsync(
+            int employerId, int jobId, CompanyApplicationsRequestDTO request)
+        {
+            var query = _context.TbApplications
+                .Where(a => a.Job.EmployerId == employerId && a.JobId == jobId);
+
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var search = request.Search.Trim().ToLower();
+                query = query.Where(a =>
+                    a.Job.Title.ToLower().Contains(search) ||
+                    (a.Seeker.FirsName + " " + a.Seeker.MiddleName + " " + a.Seeker.LastName).ToLower().Contains(search)
+                );
+            }
+
+            if (request.ApplicationStatusId.HasValue)
+            {
+                query = query.Where(a => a.ApplicationStatusId == request.ApplicationStatusId.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(a => a.ApplicationDate).ThenByDescending(a => a.Id)
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(a => new JobApplicantDTO
+                {
+                    ApplicationId = a.Id,
+                    FullName = a.Seeker.FirsName + " " + a.Seeker.MiddleName + " " + a.Seeker.LastName,
+                    Email = a.Seeker.ApplicationUser.Email ?? string.Empty,
+                    ApplicationDate = a.ApplicationDate,
+                    MatchingPercentage = a.MatchingPercentage,
+                    ApplicationStatus = a.ApplicationStatus.Name,
+                    CvDownloadUrl = a.Seeker.ResumeUrl
+                })
+                .ToListAsync();
+
+            foreach (var item in items)
+            {
+                if (!string.IsNullOrEmpty(item.CvDownloadUrl))
+                    item.CvDownloadUrl = _fileService.DownloadUrlAsync(item.CvDownloadUrl)?.SasUrl;
+            }
+
+            return new ApiResponse<PaginatedResult<JobApplicantDTO>>(200,
+                new PaginatedResult<JobApplicantDTO>
+                {
+                    Items = items,
+                    CurrentPage = request.Page,
+                    PageSize = request.PageSize,
+                    TotalCount = totalCount
+                });
+        }
 
 
         private async Task<int?> CalculateMatchingPercentageAsync(int seekerId, int jobId)
