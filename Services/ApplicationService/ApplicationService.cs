@@ -426,15 +426,15 @@ namespace GoWork.Services.ApplicationService
                     "Application can only be rejected from PendingReview, Shortlisted, or Interviewed status.");
 
             application.ApplicationStatusId = (int)ApplicationStatusEnum.Rejected;
-            //// Find related interview
-            //var interview = await _context.TbInterviews
-            //    .FirstOrDefaultAsync(i => i.ApplicationId == application.Id);
+            // Find related interview
+            var interview = await _context.TbInterviews
+                .FirstOrDefaultAsync(i => i.ApplicationId == application.Id);
 
-            //// Reject/Cancel related interview if exists
-            //if (interview != null)
-            //{
-            //    interview.InterviewStatusId = (int)InterviewStatusEnum.Cancelled;
-            //}
+            // Reject/Cancel related interview if exists
+            if (interview != null)
+            {
+                interview.InterviewStatusId = (int)InterviewStatusEnum.Cancelled;
+            }
 
             await _context.SaveChangesAsync();
 
