@@ -1,5 +1,6 @@
 ﻿using ECommerceApp.DTOs;
 using GoWork.Data;
+using GoWork.DTOs.AuthDTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.Enums;
 using GoWork.Services.EmailService;
@@ -641,7 +642,7 @@ namespace GoWork.Services.AdminService
             });
         }
 
-        public async Task<ApiResponse<ConfirmationResponseDTO>> CreateSubAdminAsync(GoWork.DTOs.AuthDTOs.AdminRegistrationDTO dto)
+        public async Task<ApiResponse<ConfirmationResponseDTO>> CreateSubAdminAsync(AdminRegistrationDTO dto)
         {
             var existingUser = await _userManager.FindByEmailAsync(dto.Email);
             if (existingUser != null)

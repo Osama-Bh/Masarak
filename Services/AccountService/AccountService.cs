@@ -1284,8 +1284,17 @@ namespace GoWork.Service.AccountService
                     Name = "Masarak",
                 });
             }
-
-            return new ApiResponse<EmployerResponseDTO>(404, "Invalid Credintials.");
+            else if (role == "SubAdmin")
+            {
+                return new ApiResponse<EmployerResponseDTO>(200, new EmployerResponseDTO
+                {
+                    EmployerId = user.Id,
+                    Email = user.Email,
+                    Role = role,
+                    Name = user.Name
+                });
+            }
+                return new ApiResponse<EmployerResponseDTO>(404, "Invalid Credintials.");
         }
 
         //public async Task<ApiResponse<ConfirmationResponseDTO>> ForgetPassword(ForgetPasswordDTO forgetpasswordDTO)

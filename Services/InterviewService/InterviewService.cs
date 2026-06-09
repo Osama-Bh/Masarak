@@ -245,22 +245,22 @@ namespace GoWork.Services.InterviewService
             var now = DateTime.UtcNow;
 
             // Auto-update past interviews to MissingInterview
-            var pastInterviews = await _context.TbInterviews
-                .Include(i => i.Application)
-                .Where(i => i.Application.Job.EmployerId == employerId &&
-                            (i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled ) &&
-                            i.InterviewDate <= now)
-                .ToListAsync();
+            //var pastInterviews = await _context.TbInterviews
+            //    .Include(i => i.Application)
+            //    .Where(i => i.Application.Job.EmployerId == employerId &&
+            //                (i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled ) &&
+            //                i.InterviewDate <= now)
+            //    .ToListAsync();
 
-            if (pastInterviews.Any())
-            {
-                foreach (var interview in pastInterviews)
-                {
-                    interview.InterviewStatusId = (int)InterviewStatusEnum.MissingInterview;
-                    interview.Application.ApplicationStatusId = (int)ApplicationStatusEnum.MissingInterview;
-                }
-                await _context.SaveChangesAsync();
-            }
+            //if (pastInterviews.Any())
+            //{
+            //    foreach (var interview in pastInterviews)
+            //    {
+            //        interview.InterviewStatusId = (int)InterviewStatusEnum.MissingInterview;
+            //        interview.Application.ApplicationStatusId = (int)ApplicationStatusEnum.MissingInterview;
+            //    }
+            //    await _context.SaveChangesAsync();
+            //}
 
             // Base query: all interviews for this employer's jobs
             var baseQuery = _context.TbInterviews
