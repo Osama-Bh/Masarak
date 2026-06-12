@@ -76,9 +76,9 @@ namespace GoWork.Controllers
         {
             //await _notificationService.SendToTopicAsync("all", "Test Message", "Hi there", NotificationTypeEnum.General);
 
-            await _notificationService.SendToTopicAsync(
-                "SoftwareEngineering_101",
-                "New Job Opportunity!",
+             await _notificationService.SendToTopicAsync(
+                "category_101",
+                "New Job Opportunity (Test)!",
                 $"A new frontEnd Dev position has just opened up. Tap to view details and apply!",
                 NotificationTypeEnum.JobCreated);
             return Ok();

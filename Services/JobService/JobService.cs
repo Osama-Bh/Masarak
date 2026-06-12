@@ -235,7 +235,7 @@ namespace GoWork.Services.JobService
             // Send Notification
             var category = await _context.TbCategories.FindAsync(dto.CategoryId);
             var categoryName = category?.Name ?? "category";
-            var topic = $"{categoryName}_{dto.CategoryId}";
+            var topic = $"category_{dto.CategoryId}";
 
             await _notificationService.SendToTopicAsync(
                 topic,

@@ -8,6 +8,13 @@ namespace GoWork.Services.FirebaseNotificationSender
 {
     public class FirebaseNotificationSender : IFirebaseNotificationSender
     {
+        private readonly ILogger<FirebaseNotificationSender> _logger;
+
+        public FirebaseNotificationSender(ILogger<FirebaseNotificationSender> logger)
+        {
+            _logger = logger;
+        }
+
         public async Task SendToTopicAsync(string topic, string title, string body, Dictionary<string, string>? data = null)
         {
             try
@@ -29,9 +36,9 @@ namespace GoWork.Services.FirebaseNotificationSender
 
                 await FirebaseMessaging.DefaultInstance.SendAsync(message);
             }
-            catch
+            catch (Exception ex)
             {
-                // Gracefully swallow errors as per business requirements to prevent API crashes.
+                _logger.LogError(ex, "Failed to send Firebase topic notification");
             }
         }
 
@@ -66,9 +73,9 @@ namespace GoWork.Services.FirebaseNotificationSender
                     await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(multicastMessage);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Gracefully swallow errors as per business requirements to prevent API crashes.
+                _logger.LogError(ex, "Failed to send Firebase tokens notification");
             }
         }
     }
