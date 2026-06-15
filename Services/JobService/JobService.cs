@@ -34,7 +34,7 @@ namespace GoWork.Services.JobService
             _notificationService = notificationService;
         }
 
-        
+
         // ==================== Job CRUD ====================
 
         public async Task<ApiResponse<CompanyJobsStatisticsDTO>> GetJobsStatisticsAsync(int employerId)
@@ -385,26 +385,51 @@ namespace GoWork.Services.JobService
         public async Task<ApiResponse<JobRecommendationResultDto>> GetJobRecommendationsAsync(int seekerId)
         {
             // 1. Fetch seeker and validate
+            //var seeker = await _context.TbSeekers
+            //    .Include(s => s.InterestCategory)
+            //    .Include(s => s.SeekerSkills).ThenInclude(ss => ss.Skill)
+            //    .Include(s => s.Applications!).ThenInclude(a => a.Interviews)
+            //    .FirstOrDefaultAsync(s => s.Id == seekerId);
+
             var seeker = await _context.TbSeekers
-                .Include(s => s.InterestCategory)
-                .Include(s => s.SeekerSkills).ThenInclude(ss => ss.Skill)
-                .Include(s => s.Applications!).ThenInclude(a => a.Interviews)
-                .FirstOrDefaultAsync(s => s.Id == seekerId);
+                .Where(s => s.Id == seekerId)
+                .Select(s => new
+                {
+                    FullName = s.FirsName + " " + s.MiddleName + " " + s.LastName,
+
+                    Skills = s.SeekerSkills
+                            .Select(ss => new
+                            {
+                                Id = ss.Skill.Id,
+                                Name = ss.Skill.Name
+                            })
+                            .ToList(),
+
+                    categoryName = s.InterestCategory.Name,
+
+                    ApplicationsCount = s.Applications!.Count(),
+                    PendingApplicationsCout = s.Applications!.Count(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview),
+
+                    ScheduledInterviewsCount = s.Applications!
+                            .SelectMany(a => a.Interviews!)
+                            .Count(i => i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled)
+                })
+                .FirstOrDefaultAsync();
 
             if (seeker == null)
             {
                 return new ApiResponse<JobRecommendationResultDto>(404, "Seeker not found.");
             }
 
-            var nameParts = new[] { seeker.FirsName, seeker.MiddleName, seeker.LastName }
-                .Where(n => !string.IsNullOrWhiteSpace(n));
-            
+            //var nameParts = new[] { seeker.FirsName, seeker.MiddleName, seeker.LastName }
+            //    .Where(n => !string.IsNullOrWhiteSpace(n));
+
             var responseDto = new JobRecommendationResultDto
             {
-                SeekerFullName = string.Join(" ", nameParts),
-                TotalApplicationsCount = seeker.Applications?.Count ?? 0,
-                PendingReviewApplicationsCount = seeker.Applications?.Count(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview) ?? 0,
-                TotalInterviewsCount = seeker.Applications?.SelectMany(a => a.Interviews ?? Enumerable.Empty<Interview>()).Count() ?? 0
+                SeekerFullName = seeker.FullName,
+                TotalApplicationsCount = seeker.ApplicationsCount,
+                PendingReviewApplicationsCount = seeker.PendingApplicationsCout,
+                TotalInterviewsCount = seeker.ScheduledInterviewsCount
             };
 
             // 2. Fetch pre-filtered jobs via SP (up to 30 jobs for AI)
@@ -434,8 +459,8 @@ namespace GoWork.Services.JobService
                     // 4. Construct JSON objects for AI prompt
                     var candidateProfile = new
                     {
-                        skills = seeker.SeekerSkills?.Select(ss => ss.Skill.Name).ToList() ?? new List<string>(),
-                        category = seeker.InterestCategory?.Name ?? "General"
+                        skills = seeker.Skills?.Select(ss => ss.Name).ToList() ?? new List<string>(),
+                        categoryName = seeker.categoryName ?? "General"
                     };
 
                     var jobsList = preFilteredJobs.Select(j => new
@@ -448,28 +473,6 @@ namespace GoWork.Services.JobService
 
                     var candidateJson = JsonSerializer.Serialize(candidateProfile);
                     var jobsJson = JsonSerializer.Serialize(jobsList);
-
-                    //var prompt = $@"
-                    //You are a job ranking AI. Rank the following jobs for the candidate based on:
-                    //1. Skills overlap (highest priority)
-                    //2. Semantic similarity between job description and candidate skills
-
-                    //Return ONLY valid JSON in this exact format:
-
-                    //{{
-                    //  ""ranked_jobs"": [
-                    //    {{ ""job_id"": 10, ""score"": 0.92 }},
-                    //    {{ ""job_id"": 11, ""score"": 0.81 }}
-                    //  ]
-                    //}}
-
-                    //Do not include explanations or text outside JSON.
-
-                    //Candidate:
-                    //{candidateJson}
-
-                    //Jobs:
-                    //{jobsJson}";
 
                     var prompt = $@"
                     You are an expert AI recruiter. Your task is to evaluate and rank a list of jobs based on how well they match a candidate's profile.
@@ -571,70 +574,6 @@ namespace GoWork.Services.JobService
             return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
         }
 
-
-        //public async Task<ApiResponse<string>> EnhanceJobDescriptionAsync(EnhanceJobDescriptionDTO dto)
-        //{
-        //    var apiKey = _configuration["OpenAI:ApiKey"];
-        //    if (string.IsNullOrWhiteSpace(apiKey))
-        //    {
-        //        return new ApiResponse<string>(500, "AI Service is not configured. Please contact support.");
-        //    }
-
-        //    try
-        //    {
-        //        var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
-        //        var chatClient = new ChatClient(modelName, apiKey);
-
-        //        //var prompt = $@"
-        //        //You are a professional HR and Technical Recruiter. Your goal is to take a draft job title and description and transform them into a high-quality, professional, and engaging job posting. 
-
-        //        //Instructions:
-        //        //1. Improve the structure and flow of the content.
-        //        //2. Use professional and persuasive language to attract top talent.
-        //        //3. Organize the information into clear sections such as 'About the Role', 'Responsibilities', and 'Requirements'.
-        //        //4. Ensure the tone is appropriate for a modern workplace.
-        //        //5. Do NOT change the core meaning or the essential requirements of the job.
-        //        //6. Return ONLY the enhanced description text, without any additional comments, markdown headers like '###', or conversational filler.
-        //        //7. If the input is in Arabic, respond in Arabic. If English, respond in English.
-
-        //        //Job Title: {dto.Title}
-        //        //Original Description: {dto.Description}";
-
-        //        var messages = new List<ChatMessage>
-        //        {
-        //            new SystemChatMessage("You are a professional HR and Technical Recruiter. Your task is to enhance job descriptions to be more professional, engaging, and structured. Use clear sections like 'About the Role', 'Responsibilities', and 'Requirements'. Do not include markdown headers like '###' or any conversational filler. Return ONLY the enhanced description. Respond in the same language as the input (Arabic or English)."),
-        //            new UserChatMessage($"Job Title: {dto.Title}\n\nDraft Description:\n{dto.Description}")
-        //        };
-
-        //        var options = new ChatCompletionOptions
-        //        {
-        //            Temperature = 0.3f,
-        //        };
-
-        //        //var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new SystemChatMessage(prompt) }, options);
-        //        //var enhancedDescription = completion.Value.Content[0].Text?.Trim();
-
-        //        var completion = await chatClient.CompleteChatAsync(messages, options);
-
-        //        // Get the first content part that is text
-        //        var enhancedDescription = completion.Value.Content.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.Text))?.Text?.Trim();
-
-
-        //        if (string.IsNullOrWhiteSpace(enhancedDescription))
-        //        {
-        //            return new ApiResponse<string>(500, "AI failed to generate an enhanced description.");
-        //        }
-
-        //        return new ApiResponse<string>(200, enhancedDescription);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"AI Enhancement Failed: {ex.Message}");
-        //        return new ApiResponse<string>(500, "An error occurred while communicating with the AI service.");
-        //    }
-        //}
-
-
         // ==================== Job Applications ====================
 
         public async Task<ApiResponse<JobDescriptionEnhancementResultDTO>> EnhanceJobDescriptionAsync(EnhanceJobDescriptionDTO dto)
@@ -672,7 +611,7 @@ namespace GoWork.Services.JobService
                 Job Title: {dto.Title}
                 Original Description: {dto.Description}";
 
-                
+
 
                 var options = new ChatCompletionOptions
                 {
@@ -689,7 +628,7 @@ namespace GoWork.Services.JobService
 
                 var aiContent = completion.Value.Content[0].Text;
                 var resultDto = JsonSerializer.Deserialize<JobDescriptionEnhancementResultDTO>(aiContent);
-                
+
                 if (resultDto == null || string.IsNullOrWhiteSpace(resultDto.EnhancedDescription))
                 {
                     return new ApiResponse<JobDescriptionEnhancementResultDTO>(500, "AI returned an empty response.");
@@ -849,15 +788,15 @@ namespace GoWork.Services.JobService
 
                 //var prompt = $@"
                 //    You are an expert technical recruiter and HR specialist. Your task is to calculate a match percentage (0-100) between a candidate and a job posting.
-                    
+
                 //    ### Candidate Information:
                 //    - **Resume/CV URL**: {cvUrl}
-                    
+
                 //    ### Job Requirements:
                 //    - **Title**: {job.Title}
                 //    - **Description**: {job.Description}
                 //    - **Required Skills**: {jobSkills}
-                    
+
                 //    ### Instructions:
                 //    1. Evaluate the candidate's alignment with the job based ONLY on the content of their Resume/CV.
                 //    2. Consider the provided Resume/CV URL as the SOLE source of information for the candidate's background, skills, and experience.
@@ -1100,7 +1039,7 @@ namespace GoWork.Services.JobService
             //        query = query.Where(j => j.CategoryId == seeker.InterestCategoryId);
             //    }
             //}
-            
+
             // Apply text search
             if (!string.IsNullOrWhiteSpace(request.Search))
             {

@@ -85,7 +85,8 @@ namespace GoWork.Services.ApplicationService
 
 
             // Build base query filtered by seeker
-            var baseQuery = _context.TbApplications.Where(a => a.SeekerId == seeker.Id && a.ApplicationStatusId != (int)ApplicationStatusEnum.Withdrawn);
+            var baseQuery = _context.TbApplications.Where(a => a.SeekerId == seeker.Id);
+
 
             // Apply optional status filter
             if (requestDTO.ApplicationStatusId.HasValue)
