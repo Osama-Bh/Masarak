@@ -9,11 +9,8 @@ using GoWork.Services.AdminService;
 using GoWork.Services.JobService;
 using GoWork.Services.NotificationService;
 using Hangfire;
-<<<<<<< HEAD
-using Hangfire.Common;
-=======
 using Microsoft.AspNetCore.Identity;
->>>>>>> 78c2748c5cdef0dc8372631d9959ff1830f06327
+using Hangfire.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
