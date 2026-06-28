@@ -1294,7 +1294,7 @@ namespace GoWork.Service.AccountService
                     Name = user.Name
                 });
             }
-                return new ApiResponse<EmployerResponseDTO>(404, "Invalid Credintials.");
+                return new ApiResponse<EmployerResponseDTO>(404, "البريد الإلكتروني أو كلمة المرور غير صحيحة");
         }
 
         //public async Task<ApiResponse<ConfirmationResponseDTO>> ForgetPassword(ForgetPasswordDTO forgetpasswordDTO)
