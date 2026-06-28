@@ -1138,21 +1138,13 @@ namespace GoWork.Services.JobService
             //    return new ApiResponse<ApplicationResultDto>(404, "Candidate not found.");
             //}
 
-            var alreadyApplied = await _context.TbApplications.AnyAsync(a => a.JobId == jobId && a.SeekerId == seekerId && a.ApplicationStatusId != (int)ApplicationStatusEnum.Withdrawn && a.ApplicationStatusId != (int)ApplicationStatusEnum.Rejected);
+            var alreadyApplied = await _context.TbApplications.AnyAsync(a => a.JobId == jobId && a.SeekerId == seekerId && 
+            a.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview && a.ApplicationStatusId != (int)ApplicationStatusEnum.Shortlisted &&
+            a.ApplicationStatusId != (int)ApplicationStatusEnum.Hired && a.ApplicationStatusId != (int)ApplicationStatusEnum.Interviewed);
             if (alreadyApplied)
             {
                 return new ApiResponse<ApplicationResultDto>(400, "You have already applied for this job.");
             }
-
-            //var score = await CalculateMatchScoreAsync(seeker, job);
-            //var statusId = (int)ApplicationStatusEnum.PendingReview;
-            //var message = "Application submitted successfully.";
-
-            //if (score < 5)
-            //{
-            //    statusId = (int)ApplicationStatusEnum.Rejected;
-            //    message = "Application submitted, but did not meet the matching criteria for this role.";
-            //}
 
             var application = new Application
             {
@@ -1231,7 +1223,6 @@ namespace GoWork.Services.JobService
         }
 
         // ==================== Job Search ====================
-
         public async Task<ApiResponse<JobSearchResponseDto>> SearchJobsAsync(JobSearchRequestDto request)
         {
             var query = _context.TbJobs.AsNoTracking().Where(j => j.JobStatusId == (int)JobStatusEnum.Published && j.ExpirationDate >= DateTime.UtcNow);
