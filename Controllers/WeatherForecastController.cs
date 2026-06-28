@@ -1,13 +1,15 @@
 using ECommerceApp.DTOs;
 using GoWork.Data;
+using GoWork.DTOs.AuthDTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.Enums;
+using GoWork.Infrastructure.Hangfire;
 using GoWork.Models;
 using GoWork.Services.AdminService;
 using GoWork.Services.JobService;
 using GoWork.Services.NotificationService;
 using Hangfire;
-using GoWork.Infrastructure.Hangfire;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,13 +28,16 @@ namespace GoWork.Controllers
         private readonly ApplicationDbContext _context;
         private readonly INotificationService _notificationService;
         private readonly IAdminService _adminService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger, IAdminService adminService, ApplicationDbContext context, INotificationService notificationService)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IAdminService adminService, ApplicationDbContext context, INotificationService notificationService,UserManager<ApplicationUser> userManager)
         {
             _logger = logger;
             _context = context;
             _notificationService = notificationService;
             _adminService = adminService;
+            _userManager = userManager;
+
         }
 
         [HttpPost("hangfire")]
@@ -122,6 +127,27 @@ namespace GoWork.Controllers
                 return StatusCode(response.StatusCode, response);
             }
             return Ok(response);
+        }
+
+        [HttpPost("ResetPAssword")]
+
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> ResetPAssword(ForgetPasswordDTO forgetPasswordDTO)
+        {
+            var user = await _userManager.FindByEmailAsync(forgetPasswordDTO.Email);
+
+            //if (user == null || !await _userManager.IsEmailConfirmedAsync(user))
+            //    return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid request"); // Prevent account enumeration
+
+            if (user == null)
+                return new ApiResponse<ConfirmationResponseDTO>(400, "Email Not Found, Go to register"); // Prevent account enumeration
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, "Mohammed$1");
+
+            return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
+            {
+                Message = "Password reset successfully"
+            });
         }
     }
 }
