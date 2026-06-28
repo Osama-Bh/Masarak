@@ -9,6 +9,7 @@ using GoWork.Enums;
 using GoWork.Models;
 using GoWork.Services.CurrentUserService;
 using GoWork.Services.FileService;
+using GoWork.Services.EmailService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -24,15 +25,23 @@ namespace GoWork.Services.ApplicationService
         private readonly ICurrentUserService _currentUserService;
         private readonly IAuthorizationService _authorizationService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IEmailService _emailService;
 
 
-        public ApplicationService(ApplicationDbContext context, IFileService fileService, ICurrentUserService currentUserService, IAuthorizationService authorizationService, IHttpContextAccessor httpContextAccessor)
+        public ApplicationService(
+            ApplicationDbContext context,
+            IFileService fileService,
+            ICurrentUserService currentUserService,
+            IAuthorizationService authorizationService,
+            IHttpContextAccessor httpContextAccessor,
+            IEmailService emailService)
         {
             _context = context;
             _fileService = fileService;
             _currentUserService = currentUserService;
             _authorizationService = authorizationService;
             _httpContextAccessor = httpContextAccessor;
+            _emailService = emailService;
         }
 
         private TimeZoneInfo GetTimeZoneFromHeader()
@@ -470,14 +479,24 @@ namespace GoWork.Services.ApplicationService
         public async Task<ApiResponse<ConfirmationResponseDTO>> ScheduleInterviewAsync(
             int employerId, int applicationId, ScheduleInterviewRequestDTO dto)
         {
-            var application = await _context.TbApplications
-                .Include(a => a.Job)
-                .FirstOrDefaultAsync(a => a.Id == applicationId && a.Job.EmployerId == employerId);
+            var appData = await _context.TbApplications
+                .Where(a => a.Id == applicationId && a.Job.EmployerId == employerId)
+                .Select(a => new
+                {
+                    Application = a,
+                    CandidateEmail = a.Seeker.ApplicationUser.Email,
+                    CandidateUserName = a.Seeker.ApplicationUser.UserName,
+                    CandidateFirstName = a.Seeker.FirsName,
+                    CandidateLastName = a.Seeker.LastName,
+                    JobTitle = a.Job.Title,
+                    CompanyName = a.Job.Employer.ComapnyName
+                })
+                .FirstOrDefaultAsync();
 
-            if (application == null)
+            if (appData == null)
                 return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
 
-            if (application.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview)
+            if (appData.Application.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview)
                 return new ApiResponse<ConfirmationResponseDTO>(400,
                     "Only applications in PendingReview status can be scheduled for an interview.");
 
@@ -551,7 +570,7 @@ namespace GoWork.Services.ApplicationService
             _context.TbInterviews.Add(interview);
 
             // Update application status to Shortlisted
-            application.ApplicationStatusId = (int)ApplicationStatusEnum.Shortlisted;
+            appData.Application.ApplicationStatusId = (int)ApplicationStatusEnum.Shortlisted;
 
             await _context.SaveChangesAsync();
 
@@ -563,8 +582,117 @@ namespace GoWork.Services.ApplicationService
             interview.ExpirationHangfireJobId = hangfireJobId;
             await _context.SaveChangesAsync();
 
+            // Send email to candidate
+            if (!string.IsNullOrWhiteSpace(appData.CandidateEmail))
+            {
+                try
+                {
+                    string candidateName = $"{appData.CandidateFirstName} {appData.CandidateLastName}".Trim();
+                    if (string.IsNullOrWhiteSpace(candidateName))
+                    {
+                        candidateName = appData.CandidateUserName ?? "Client";
+                    }
+
+                    string interviewType = dto.InterviewTypeId switch
+                    {
+                        (int)InterviewTypeEnum.Online => "عبر الإنترنت (Online)",
+                        (int)InterviewTypeEnum.InPerson => "حضورياً (In-Person)",
+                        (int)InterviewTypeEnum.Phone => "عبر الهاتف (Phone)",
+                        _ => "جدول مقابلة"
+                    };
+
+                    string locationDetails = string.Empty;
+                    if (dto.InterviewTypeId == (int)InterviewTypeEnum.InPerson)
+                    {
+                        var country = await _context.TbCountries.FindAsync(dto.CountryId!.Value);
+                        var governate = await _context.TbGovernates.FindAsync(dto.GovernateId!.Value);
+                        locationDetails = $"{dto.AddressLine}, {governate?.Name}, {country?.Name}";
+                    }
+                    else if (dto.InterviewTypeId == (int)InterviewTypeEnum.Online)
+                    {
+                        locationDetails = dto.MeetingLink ?? string.Empty;
+                    }
+
+                    string formattedDate = dto.InterviewDate.ToString("yyyy-MM-dd hh:mm tt");
+
+                    string emailContent = BuildInterviewEmailBody(
+                        candidateName,
+                        appData.JobTitle,
+                        appData.CompanyName,
+                        interviewType,
+                        formattedDate,
+                        locationDetails,
+                        dto.InterviewTypeId,
+                        dto.Notes);
+
+                    await _emailService.SendEmailAsync(
+                        appData.CandidateEmail,
+                        "تفاصيل المقابلة الشخصية المجدولة - منصة مسارك",
+                        emailContent,
+                        candidateName);
+                }
+                catch (Exception ex)
+                {
+                    // Log error or ignore to prevent the whole transaction from rolling back
+                    // Since the interview was already saved in DB and status updated.
+                    Console.WriteLine($"Error sending interview schedule email: {ex.Message}");
+                }
+            }
+
             return new ApiResponse<ConfirmationResponseDTO>(200,
                 new ConfirmationResponseDTO { Message = "Interview scheduled successfully." });
+        }
+
+        private string BuildInterviewEmailBody(
+            string candidateName,
+            string jobTitle,
+            string companyName,
+            string interviewType,
+            string formattedDate,
+            string? locationDetails,
+            int interviewTypeId,
+            string? notes)
+        {
+            string locationHtml = string.Empty;
+            if (!string.IsNullOrWhiteSpace(locationDetails))
+            {
+                if (interviewTypeId == (int)InterviewTypeEnum.Online)
+                {
+                    locationHtml = $@"<p style=""margin: 5px 0;""><strong>رابط الاجتماع:</strong> <a href=""{locationDetails}"" target=""_blank"" style=""color: #0199db;"">{locationDetails}</a></p>";
+                }
+                else
+                {
+                    locationHtml = $@"<p style=""margin: 5px 0;""><strong>العنوان / التفاصيل:</strong> {locationDetails}</p>";
+                }
+            }
+
+            string notesHtml = !string.IsNullOrWhiteSpace(notes)
+                ? $@"<p style=""margin: 5px 0;""><strong>ملاحظات:</strong> {notes}</p>"
+                : string.Empty;
+
+            return $@"
+            <div style=""direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #4b5563; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 8px;"">
+                <div style=""text-align: center; margin-bottom: 20px;"">
+                    <h2 style=""color: #0199db; margin: 0;"">دعوة لمقابلة شخصية - منصة مسارك</h2>
+                </div>
+                <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin-bottom: 20px;"" />
+                <p>مرحباً <strong>{candidateName}</strong>،</p>
+                <p>يسعدنا إبلاغك بأنه قد تم جدولة مقابلة شخصية لطلب التقديم الخاص بك لوظيفة <strong>{jobTitle}</strong> لدى شركة <strong>{companyName}</strong>.</p>
+                
+                <div style=""background-color: #f9fafb; border-right: 4px solid #02b5f1; padding: 15px; margin: 20px 0; border-radius: 8px;"">
+                    <p style=""margin: 5px 0;""><strong>نوع المقابلة:</strong> {interviewType}</p>
+                    <p style=""margin: 5px 0;""><strong>تاريخ ووقت المقابلة:</strong> {formattedDate}</p>
+                    {locationHtml}
+                    {notesHtml}
+                </div>
+
+                <p style=""font-size: 14px; color: #6b7280; margin-top: 20px;"">
+                    نتمنى لك التوفيق والنجاح في مقابلتك القادمة.
+                </p>
+                <p style=""font-size: 12px; color: #9ca3af; text-align: center; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 15px;"">
+                    هذه رسالة تلقائية من منصة مسارك، الرجاء عدم الرد عليها مباشرة.
+                </p>
+            </div>";
         }
     }
 }
