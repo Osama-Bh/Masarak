@@ -9,7 +9,11 @@ using GoWork.Services.AdminService;
 using GoWork.Services.JobService;
 using GoWork.Services.NotificationService;
 using Hangfire;
+<<<<<<< HEAD
+using Hangfire.Common;
+=======
 using Microsoft.AspNetCore.Identity;
+>>>>>>> 78c2748c5cdef0dc8372631d9959ff1830f06327
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -80,11 +84,12 @@ namespace GoWork.Controllers
         public async Task<IActionResult> SendNotification()
         {
             //await _notificationService.SendToTopicAsync("all", "Test Message", "Hi there", NotificationTypeEnum.General);
+            var jobName = "Software Engineer";
 
-             await _notificationService.SendToTopicAsync(
-                "category_101",
-                "New Job Opportunity (Test)!",
-                $"A new frontEnd Dev position has just opened up. Tap to view details and apply!",
+            await _notificationService.SendToTopicAsync(
+                "",
+                "وظيفة جديدة بانتظارك!",
+                $"تمت إضافة وظيفة جديدة بعنوان \"\u2068{jobName}\u2069\". لا تفوّت الفرصة، اضغط للاطلاع على التفاصيل والتقديم.",
                 NotificationTypeEnum.JobCreated);
             return Ok();
         }

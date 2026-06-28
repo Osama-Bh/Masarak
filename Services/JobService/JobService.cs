@@ -239,8 +239,8 @@ namespace GoWork.Services.JobService
 
             await _notificationService.SendToTopicAsync(
                 topic,
-                "New Job Opportunity!",
-                $"A new {job.Title} position has just opened up. Tap to view details and apply!",
+                "وظيفة جديدة بانتظارك!",
+                $"تمت إضافة وظيفة جديدة بعنوان \"\u2068{job.Title}\u2069\". لا تفوّت الفرصة، اضغط للاطلاع على التفاصيل والتقديم.",
                 NotificationTypeEnum.JobCreated,
                 actionUrl: $"/jobs/{job.Id}");
 
@@ -381,16 +381,9 @@ namespace GoWork.Services.JobService
         }
 
         // ==================== AI Recommendations ====================
-
         public async Task<ApiResponse<JobRecommendationResultDto>> GetJobRecommendationsAsync(int seekerId)
         {
             // 1. Fetch seeker and validate
-            //var seeker = await _context.TbSeekers
-            //    .Include(s => s.InterestCategory)
-            //    .Include(s => s.SeekerSkills).ThenInclude(ss => ss.Skill)
-            //    .Include(s => s.Applications!).ThenInclude(a => a.Interviews)
-            //    .FirstOrDefaultAsync(s => s.Id == seekerId);
-
             var seeker = await _context.TbSeekers
                 .Where(s => s.Id == seekerId)
                 .Select(s => new
@@ -398,12 +391,12 @@ namespace GoWork.Services.JobService
                     FullName = s.FirsName + " " + s.MiddleName + " " + s.LastName,
 
                     Skills = s.SeekerSkills
-                            .Select(ss => new
-                            {
-                                Id = ss.Skill.Id,
-                                Name = ss.Skill.Name
-                            })
-                            .ToList(),
+                        .Select(ss => new
+                        {
+                            Id = ss.Skill.Id,
+                            Name = ss.Skill.Name
+                        })
+                        .ToList(),
 
                     categoryName = s.InterestCategory.Name,
 
@@ -411,8 +404,8 @@ namespace GoWork.Services.JobService
                     PendingApplicationsCout = s.Applications!.Count(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview),
 
                     ScheduledInterviewsCount = s.Applications!
-                            .SelectMany(a => a.Interviews!)
-                            .Count(i => i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled)
+                        .SelectMany(a => a.Interviews!)
+                        .Count(i => i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled)
                 })
                 .FirstOrDefaultAsync();
 
@@ -420,9 +413,6 @@ namespace GoWork.Services.JobService
             {
                 return new ApiResponse<JobRecommendationResultDto>(404, "Seeker not found.");
             }
-
-            //var nameParts = new[] { seeker.FirsName, seeker.MiddleName, seeker.LastName }
-            //    .Where(n => !string.IsNullOrWhiteSpace(n));
 
             var responseDto = new JobRecommendationResultDto
             {
@@ -432,7 +422,7 @@ namespace GoWork.Services.JobService
                 TotalInterviewsCount = seeker.ScheduledInterviewsCount
             };
 
-            // 2. Fetch pre-filtered jobs via SP (up to 30 jobs for AI)
+            // 2. Fetch pre-filtered jobs via SP
             var preFilteredJobs = await _context.Database.SqlQueryRaw<PreFilteredJobDTO>(
                 "EXEC sp_GetPreFilteredJobs_ForAI @p0", seekerId)
                 .AsNoTracking()
@@ -443,20 +433,21 @@ namespace GoWork.Services.JobService
                 return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
             }
 
-            // 3. Determine ranked order of job IDs
             List<int> rankedIds;
 
             var apiKey = _configuration["OpenAI:ApiKey"];
+
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                // Fallback: sort by posted date descending
-                rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
+                rankedIds = preFilteredJobs
+                    .OrderByDescending(j => j.PostedDate)
+                    .Select(j => j.Id)
+                    .ToList();
             }
             else
             {
                 try
                 {
-                    // 4. Construct JSON objects for AI prompt
                     var candidateProfile = new
                     {
                         skills = seeker.Skills?.Select(ss => ss.Name).ToList() ?? new List<string>(),
@@ -468,73 +459,94 @@ namespace GoWork.Services.JobService
                         job_id = j.Id,
                         title = j.Title,
                         description = j.Description,
-                        required_skills = string.IsNullOrWhiteSpace(j.RequiredSkills) ? new List<string>() : j.RequiredSkills.Split(',').Select(s => s.Trim()).ToList()
+                        required_skills = string.IsNullOrWhiteSpace(j.RequiredSkills)
+                            ? new List<string>()
+                            : j.RequiredSkills.Split(',').Select(s => s.Trim()).ToList()
                     });
 
                     var candidateJson = JsonSerializer.Serialize(candidateProfile);
                     var jobsJson = JsonSerializer.Serialize(jobsList);
 
+                    var preFilteredJobsCount = preFilteredJobs.Count;
+
                     var prompt = $@"
-                    You are an expert AI recruiter. Your task is to evaluate and rank a list of jobs based on how well they match a candidate's profile.
+                    You are an expert AI recruiter. Your task is to rank jobs for a candidate.
 
-                    Evaluation Criteria:
-                    1. Validate each job's required skills and description against the candidate's skills and interest category.
-                    2. Calculate a relevance score between 0.0 and 1.0 for each job (where 1.0 is a perfect match).
-                    3. Rank the job IDs strictly from most relevant (highest score) to least relevant (lowest score).
-                    4. You must include all provided jobs in the final ranking.
+                    Exactly {preFilteredJobsCount} jobs are provided.
 
-                    Return ONLY a valid JSON object in this exact format:
+                    Rules:
+                    - Return exactly {preFilteredJobsCount} items
+                    - Use ONLY provided job_id values
+                    - Do NOT invent IDs
+                    - Do NOT duplicate IDs
+                    - Do NOT omit IDs
+
+                    Return ONLY JSON:
                     {{
-                      ""ranked_jobs"": [
-                        {{ ""job_id"": 10, ""score"": 0.95 }},
-                        {{ ""job_id"": 11, ""score"": 0.82 }}
-                      ]
+                        ""ranked_jobs"": [
+                        {{ ""job_id"": 10, ""score"": 9 }}
+                        ]
                     }}
 
-                    Do not include any explanations, markdown formatting, or text outside the JSON.
-
-                    Candidate Data:
+                    Candidate:
                     {candidateJson}
 
-                    Jobs Data:
+                    Jobs:
                     {jobsJson}";
 
-                    // 5. Call OpenAI
                     var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
                     var chatClient = new ChatClient(modelName, apiKey);
 
                     var options = new ChatCompletionOptions
                     {
-                        Temperature = 0.2f,
+                        Temperature = 0,
                         ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat()
                     };
 
-                    var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new SystemChatMessage(prompt) }, options);
+                    // ✅ FIX #1: correct role separation
+                    var messages = new ChatMessage[]
+                    {
+                        new SystemChatMessage("You are an expert AI recruiter that ranks jobs strictly."),
+                        new UserChatMessage(prompt)
+                    };
+
+                    var completion = await chatClient.CompleteChatAsync(messages, options);
+
                     var aiContent = completion.Value.Content[0].Text;
 
                     var resultDto = JsonSerializer.Deserialize<AIJobRankingResponseDTO>(aiContent);
 
+                    var validIds = preFilteredJobs.Select(j => j.Id).ToHashSet();
+
                     if (resultDto?.RankedJobs != null && resultDto.RankedJobs.Any())
                     {
+                        // ✅ FIX #2: whitelist validation (CRITICAL FIX)
                         rankedIds = resultDto.RankedJobs
+                            .Where(r => validIds.Contains(r.JobId))
                             .OrderByDescending(r => r.Score)
                             .Select(r => r.JobId)
                             .ToList();
                     }
                     else
                     {
-                        // AI returned nothing useful — fallback
-                        rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
+                        rankedIds = preFilteredJobs
+                            .OrderByDescending(j => j.PostedDate)
+                            .Select(j => j.Id)
+                            .ToList();
                     }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"AI Recommendation Failed: {ex.Message}");
-                    rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
+
+                    rankedIds = preFilteredJobs
+                        .OrderByDescending(j => j.PostedDate)
+                        .Select(j => j.Id)
+                        .ToList();
                 }
             }
 
-            // 6. Enrich with full card data from EF
+            // 6. Enrich with full card data
             var enriched = await _context.TbJobs
                 .AsNoTracking()
                 .Where(j => rankedIds.Contains(j.Id))
@@ -556,7 +568,7 @@ namespace GoWork.Services.JobService
                 })
                 .ToListAsync();
 
-            // 7. Re-sort to preserve AI ranked order
+            // 7. Preserve AI ranking order
             responseDto.Recommendations = rankedIds
                 .Select(id => enriched.FirstOrDefault(j => j.Id == id))
                 .Where(j => j != null)
@@ -567,12 +579,211 @@ namespace GoWork.Services.JobService
             {
                 if (!string.IsNullOrWhiteSpace(recommendation.CompanyLogoUrl))
                 {
-                    recommendation.CompanyLogoUrl = _fileService.DownloadUrlAsync(recommendation.CompanyLogoUrl)?.SasUrl;
+                    recommendation.CompanyLogoUrl =
+                        _fileService.DownloadUrlAsync(recommendation.CompanyLogoUrl)?.SasUrl;
                 }
             }
 
             return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
         }
+        //public async Task<ApiResponse<JobRecommendationResultDto>> GetJobRecommendationsAsync(int seekerId)
+        //{
+        //    // 1. Fetch seeker and validate
+        //    //var seeker = await _context.TbSeekers
+        //    //    .Include(s => s.InterestCategory)
+        //    //    .Include(s => s.SeekerSkills).ThenInclude(ss => ss.Skill)
+        //    //    .Include(s => s.Applications!).ThenInclude(a => a.Interviews)
+        //    //    .FirstOrDefaultAsync(s => s.Id == seekerId);
+
+        //    var seeker = await _context.TbSeekers
+        //        .Where(s => s.Id == seekerId)
+        //        .Select(s => new
+        //        {
+        //            FullName = s.FirsName + " " + s.MiddleName + " " + s.LastName,
+
+        //            Skills = s.SeekerSkills
+        //                    .Select(ss => new
+        //                    {
+        //                        Id = ss.Skill.Id,
+        //                        Name = ss.Skill.Name
+        //                    })
+        //                    .ToList(),
+
+        //            categoryName = s.InterestCategory.Name,
+
+        //            ApplicationsCount = s.Applications!.Count(),
+        //            PendingApplicationsCout = s.Applications!.Count(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview),
+
+        //            ScheduledInterviewsCount = s.Applications!
+        //                    .SelectMany(a => a.Interviews!)
+        //                    .Count(i => i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled)
+        //        })
+        //        .FirstOrDefaultAsync();
+
+        //    if (seeker == null)
+        //    {
+        //        return new ApiResponse<JobRecommendationResultDto>(404, "Seeker not found.");
+        //    }
+
+        //    //var nameParts = new[] { seeker.FirsName, seeker.MiddleName, seeker.LastName }
+        //    //    .Where(n => !string.IsNullOrWhiteSpace(n));
+
+        //    var responseDto = new JobRecommendationResultDto
+        //    {
+        //        SeekerFullName = seeker.FullName,
+        //        TotalApplicationsCount = seeker.ApplicationsCount,
+        //        PendingReviewApplicationsCount = seeker.PendingApplicationsCout,
+        //        TotalInterviewsCount = seeker.ScheduledInterviewsCount
+        //    };
+
+        //    // 2. Fetch pre-filtered jobs via SP (up to 30 jobs for AI)
+        //    var preFilteredJobs = await _context.Database.SqlQueryRaw<PreFilteredJobDTO>(
+        //        "EXEC sp_GetPreFilteredJobs_ForAI @p0", seekerId)
+        //        .AsNoTracking()
+        //        .ToListAsync();
+
+        //    if (!preFilteredJobs.Any())
+        //    {
+        //        return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
+        //    }
+
+        //    // 3. Determine ranked order of job IDs
+        //    List<int> rankedIds;
+
+        //    var apiKey = _configuration["OpenAI:ApiKey"];
+        //    if (string.IsNullOrWhiteSpace(apiKey))
+        //    {
+        //        // Fallback: sort by posted date descending
+        //        rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
+        //    }
+        //    else
+        //    {
+        //        try
+        //        {
+        //            // 4. Construct JSON objects for AI prompt
+        //            var candidateProfile = new
+        //            {
+        //                skills = seeker.Skills?.Select(ss => ss.Name).ToList() ?? new List<string>(),
+        //                categoryName = seeker.categoryName ?? "General"
+        //            };
+
+        //            var jobsList = preFilteredJobs.Select(j => new
+        //            {
+        //                job_id = j.Id,
+        //                title = j.Title,
+        //                description = j.Description,
+        //                required_skills = string.IsNullOrWhiteSpace(j.RequiredSkills) ? new List<string>() : j.RequiredSkills.Split(',').Select(s => s.Trim()).ToList()
+        //            });
+
+        //            var candidateJson = JsonSerializer.Serialize(candidateProfile);
+        //            var jobsJson = JsonSerializer.Serialize(jobsList);
+
+        //            var preFilteredJobsCount = preFilteredJobs.Count;
+
+        //            var prompt = $@"
+        //            You are an expert AI recruiter. Your task is to evaluate and rank a list of jobs based on how well they match a candidate's profile.
+
+        //            Exactly {preFilteredJobsCount} jobs are provided.
+
+        //            The output MUST satisfy ALL of these rules:
+
+        //            1. Output exactly {preFilteredJobsCount} objects.
+        //            2. Each object must correspond to one input job.
+        //            3. Every input job ID must appear exactly once.
+        //            4. Never invent new IDs.
+        //            5. Never duplicate IDs.
+        //            6. Never omit IDs.
+
+        //            Return ONLY a valid JSON object in this exact format:
+        //            {{
+        //              ""ranked_jobs"": [
+        //                {{ ""job_id"": 10, ""score"": 9 }},
+        //                {{ ""job_id"": 11, ""score"": 7 }}
+        //              ]
+        //            }}
+
+        //            Do not include any explanations, markdown formatting, or text outside the JSON.
+
+        //            Candidate Data:
+        //            {candidateJson}
+
+        //            Jobs Data:
+        //            {jobsJson}";
+
+        //            // 5. Call OpenAI
+        //            var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
+        //            var chatClient = new ChatClient(modelName, apiKey);
+
+        //            var options = new ChatCompletionOptions
+        //            {
+        //                Temperature = 0,
+        //                ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat()
+        //            };
+
+        //            var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new SystemChatMessage(prompt) }, options);
+        //            var aiContent = completion.Value.Content[0].Text;
+
+        //            var resultDto = JsonSerializer.Deserialize<AIJobRankingResponseDTO>(aiContent);
+
+        //            if (resultDto?.RankedJobs != null && resultDto.RankedJobs.Any())
+        //            {
+        //                rankedIds = resultDto.RankedJobs
+        //                    .OrderByDescending(r => r.Score)
+        //                    .Select(r => r.JobId)
+        //                    .ToList();
+        //            }
+        //            else
+        //            {
+        //                // AI returned nothing useful — fallback
+        //                rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
+        //            }
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Console.WriteLine($"AI Recommendation Failed: {ex.Message}");
+        //            rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
+        //        }
+        //    }
+
+        //    // 6. Enrich with full card data from EF
+        //    var enriched = await _context.TbJobs
+        //        .AsNoTracking()
+        //        .Where(j => rankedIds.Contains(j.Id))
+        //        .Select(j => new JobCardDto
+        //        {
+        //            Id = j.Id,
+        //            Title = j.Title,
+        //            Description = j.Description,
+        //            CompanyName = j.Employer.ComapnyName,
+        //            CompanyLogoUrl = j.Employer.LogoUrl,
+        //            Category = j.Category.Name,
+        //            JobType = j.JobType.Name,
+        //            LocationType = j.JobLocationType.Name,
+        //            Country = j.Address != null && j.Address.Country != null ? j.Address.Country.Name : null,
+        //            Governate = j.Address != null && j.Address.Governate != null ? j.Address.Governate.Name : null,
+        //            MinSalary = j.MinSalary,
+        //            MaxSalary = j.MaxSalary,
+        //            PostedDate = j.PostedDate
+        //        })
+        //        .ToListAsync();
+
+        //    // 7. Re-sort to preserve AI ranked order
+        //    responseDto.Recommendations = rankedIds
+        //        .Select(id => enriched.FirstOrDefault(j => j.Id == id))
+        //        .Where(j => j != null)
+        //        .Cast<JobCardDto>()
+        //        .ToList();
+
+        //    foreach (var recommendation in responseDto.Recommendations)
+        //    {
+        //        if (!string.IsNullOrWhiteSpace(recommendation.CompanyLogoUrl))
+        //        {
+        //            recommendation.CompanyLogoUrl = _fileService.DownloadUrlAsync(recommendation.CompanyLogoUrl)?.SasUrl;
+        //        }
+        //    }
+
+        //    return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
+        //}
 
         // ==================== Job Applications ====================
 
