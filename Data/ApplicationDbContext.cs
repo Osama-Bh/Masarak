@@ -51,30 +51,64 @@ namespace GoWork.Data
         {
             base.OnModelCreating(builder);
 
-            // Configure relationships and restrict delete actions
+            // ---- Global safety net: Restrict all FKs by default ----
+            // Runs first so every relationship not explicitly configured below
+            // is protected from accidental cascade deletes.
+            foreach (var foreignKey in builder.Model
+                         .GetEntityTypes()
+                         .SelectMany(e => e.GetForeignKeys()))
+            {
+                foreignKey.DeleteBehavior = DeleteBehavior.Restrict;
+            }
+
+            // ---- IdentityUserRole → ApplicationUser (Cascade) ----
+            // UserManager.DeleteAsync() removes the user row, so role assignments
+            // in AspNetUserRoles must cascade-delete automatically.
+            builder.Entity<IdentityUserRole<int>>()
+                .HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(ur => ur.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ---- Job relationships ----
             builder.Entity<Job>()
                 .HasOne(j => j.Employer)
                 .WithMany(e => e.Jobs)
                 .HasForeignKey(j => j.EmployerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<Job>()
+                .HasOne(j => j.Address)
+                .WithOne()
+                .HasForeignKey<Job>(j => j.AddressId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Job>()
+                .HasIndex(j => j.AddressId)
+                .IsUnique();
+
+            // ---- Application relationships ----
+            // Deleting a Job does NOT delete its applications (Restrict)
             builder.Entity<Application>()
                 .HasOne(a => a.Job)
                 .WithMany(j => j.Applications)
                 .HasForeignKey(a => a.JobId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Deleting a Seeker cascades to their applications
             builder.Entity<Application>()
                 .HasOne(a => a.Seeker)
                 .WithMany(s => s.Applications)
                 .HasForeignKey(a => a.SeekerId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
+            // ---- Interview relationships ----
+            // Deleting an Application cascades to its interviews
             builder.Entity<Interview>()
                 .HasOne(i => i.Application)
                 .WithMany(a => a.Interviews)
                 .HasForeignKey(i => i.ApplicationId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Interview>()
                 .HasOne(i => i.InterviewType)
@@ -88,6 +122,7 @@ namespace GoWork.Data
                 .HasForeignKey(i => i.InterviewStatusId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // ---- Skill configuration ----
             builder.Entity<Skill>(entity =>
             {
                 entity.Property(s => s.Name)
@@ -98,49 +133,86 @@ namespace GoWork.Data
                       .IsUnique();
             });
 
+            // ---- Seeker relationships ----
+            // Deleting a Seeker cascades to their skills (junction rows)
+            builder.Entity<SeekerSkill>()
+                .HasOne(ss => ss.Seeker)
+                .WithMany(s => s.SeekerSkills)
+                .HasForeignKey(ss => ss.SeekerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // ----- Seeker -----
+            // Deleting a Seeker cascades to their exclusively-owned address
             builder.Entity<Seeker>()
-             .HasOne(s => s.Address)
-             .WithOne()
-             .HasForeignKey<Seeker>(s => s.AddressId)
-             .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(s => s.Address)
+                .WithOne()
+                .HasForeignKey<Seeker>(s => s.AddressId)
+                .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Entity<Seeker>()
+                .HasIndex(s => s.AddressId)
+                .IsUnique();
 
-            // ----- Employer -----
+            // ---- Employer relationships ----
             builder.Entity<Employer>()
-            .HasOne(e => e.Address)
-            .WithOne()
-            .HasForeignKey<Employer>(e => e.AddressId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-            // ----- Job -----
-            builder.Entity<Job>()
-            .HasOne(j => j.Address)
-            .WithOne()
-            .HasForeignKey<Job>(j => j.AddressId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<Seeker>()
-            .HasIndex(s => s.AddressId)
-            .IsUnique();
+                .HasOne(e => e.Address)
+                .WithOne()
+                .HasForeignKey<Employer>(e => e.AddressId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Employer>()
                 .HasIndex(e => e.AddressId)
                 .IsUnique();
 
-            builder.Entity<Job>()
-                .HasIndex(j => j.AddressId)
-                .IsUnique();
+            // ---- ApplicationUser cascade delete chain ----
+            // When the ApplicationUser is deleted (via UserManager in the service layer),
+            // EF/DB cascades remove these owned child rows automatically.
 
-
-            // ---- Global Restrict for all relationships ----
-            foreach (var foreignKey in builder.Model
-                         .GetEntityTypes()
-                         .SelectMany(e => e.GetForeignKeys()))
+            // UserNotification → ApplicationUser (cascade)
+            builder.Entity<UserNotification>(entity =>
             {
-                foreignKey.DeleteBehavior = DeleteBehavior.Restrict;
-            }
+                entity.HasIndex(un => new { un.UserId, un.IsHidden, un.IsRead });
+                entity.HasOne(un => un.Notification)
+                      .WithMany(n => n.UserNotifications)
+                      .HasForeignKey(un => un.NotificationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(un => un.User)
+                      .WithMany(u => u.UserNotifications)
+                      .HasForeignKey(un => un.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // DeviceToken → ApplicationUser (cascade)
+            builder.Entity<DeviceToken>(entity =>
+            {
+                entity.Property(dt => dt.Token).IsRequired().HasMaxLength(500);
+                entity.Property(dt => dt.DeviceType).IsRequired().HasMaxLength(50);
+                entity.HasIndex(dt => dt.Token).IsUnique();
+                entity.HasIndex(dt => dt.UserId);
+                entity.HasOne(dt => dt.User)
+                      .WithMany(u => u.DeviceTokens)
+                      .HasForeignKey(dt => dt.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Feedback → ApplicationUser (cascade)
+            builder.Entity<Feedback>()
+                .HasOne(f => f.AppUser)
+                .WithMany(u => u.Feedbacks)
+                .HasForeignKey(f => f.ReviewerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ---- Notification configuration ----
+            builder.Entity<Notification>(entity =>
+            {
+                entity.Property(n => n.Title).IsRequired().HasMaxLength(200);
+                entity.Property(n => n.Body).IsRequired().HasMaxLength(1000);
+                entity.Property(n => n.Topic).HasMaxLength(200);
+                entity.Property(n => n.ActionUrl).HasMaxLength(500);
+                entity.Property(n => n.ImageUrl).HasMaxLength(500);
+                entity.HasIndex(n => n.CreatedAt);
+                entity.HasIndex(n => n.Type);
+            });
+
 
             // Seed data for ApplicationStatus
             builder.Entity<ApplicationStatus>().HasData(
@@ -271,44 +343,6 @@ namespace GoWork.Data
                 }
             );
 
-            // Notification Configuration
-            builder.Entity<Notification>(entity =>
-            {
-                entity.Property(n => n.Title).IsRequired().HasMaxLength(200);
-                entity.Property(n => n.Body).IsRequired().HasMaxLength(1000);
-                entity.Property(n => n.Topic).HasMaxLength(200);
-                entity.Property(n => n.ActionUrl).HasMaxLength(500);
-                entity.Property(n => n.ImageUrl).HasMaxLength(500);
-                entity.HasIndex(n => n.CreatedAt);
-                entity.HasIndex(n => n.Type);
-            });
-
-            // UserNotification Configuration
-            builder.Entity<UserNotification>(entity =>
-            {
-                entity.HasIndex(un => new { un.UserId, un.IsHidden, un.IsRead });
-                entity.HasOne(un => un.Notification)
-                      .WithMany(n => n.UserNotifications)
-                      .HasForeignKey(un => un.NotificationId)
-                      .OnDelete(DeleteBehavior.Restrict);
-                entity.HasOne(un => un.User)
-                      .WithMany(u => u.UserNotifications)
-                      .HasForeignKey(un => un.UserId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
-
-            // DeviceToken Configuration
-            builder.Entity<DeviceToken>(entity =>
-            {
-                entity.Property(dt => dt.Token).IsRequired().HasMaxLength(500);
-                entity.Property(dt => dt.DeviceType).IsRequired().HasMaxLength(50);
-                entity.HasIndex(dt => dt.Token).IsUnique();
-                entity.HasIndex(dt => dt.UserId);
-                entity.HasOne(dt => dt.User)
-                      .WithMany(u => u.DeviceTokens)
-                      .HasForeignKey(dt => dt.UserId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
         }
 
         

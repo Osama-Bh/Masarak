@@ -397,6 +397,23 @@ namespace GoWork.Controllers.Auth
             return Ok(response);
         }
 
+        [HttpPost("Candidate/DeleteAccount")]
+        public async Task<ActionResult<ApiResponse<ConfirmationResponseDTO>>> DeleteCandidateAccount()
+        {
+            var UserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (UserIdClaim == null || !int.TryParse(UserIdClaim.Value, out int userId))
+            {
+                return Unauthorized("Unauthorized: CandidateId not found.");
+            }
+           
+            var response = await _accountService.DeleteCandidateAccountAsync(userId);
+            if (response.StatusCode != 200)
+            {
+                return StatusCode((int)response.StatusCode, response);
+            }
+            return Ok(response);
+        }
+
         [HttpPost("Candidate/Login")]
         public async Task<ActionResult<ApiResponse<LoginResponseDTO>>> Login(LoginDTO loginDTO)
         {

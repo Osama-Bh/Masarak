@@ -67,6 +67,13 @@ namespace GoWork.Service.AccountService
         Task<ApiResponse<EmployerResponseDTO>> LoginAdminAndCompany(LoginDTO loginDTO);
 
         Task<ApiResponse<ConfirmationResponseDTO>> UpdateAdminProfileAsync(int userId, UpdateAdminProfileDTO dto);
+
+        /// <summary>
+        /// Deletes a Seeker by their Seeker.Id and cascades to all related entities,
+        /// including the linked ApplicationUser and their notifications, device tokens, and feedbacks.
+        /// </summary>
+        Task<ApiResponse<ConfirmationResponseDTO>> DeleteCandidateAccountAsync(int userId);
+
         // Token
         string GenerateJwtToken(ApplicationUser user);
     }

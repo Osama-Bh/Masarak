@@ -1659,80 +1659,6 @@ namespace GoWork.Service.AccountService
             }
         }
 
-        //public async Task<ApiResponse<ConfirmationResponseDTO>> DeleteAccountAsync(int userId)
-        //{
-
-        //    var user = await _context.Users
-        //        .FirstOrDefaultAsync(u => u.Id == userId);
-
-        //    if (user == null)
-        //        return new ApiResponse<ConfirmationResponseDTO>(404, new ConfirmationResponseDTO
-        //        {
-        //            Message = "User Not Found"
-        //        });
-
-        //    var roles = await _userManager.GetRolesAsync(user);
-        //    var role = roles.FirstOrDefault() ?? "Unknown";
-
-        //    if(role == "Company")
-        //    {
-        //        var employer = await _context.TbEmployers
-        //        .FirstOrDefaultAsync(e => e.UserId == userId);
-
-        //        if (employer != null)
-        //            _context.TbEmployers.Remove(employer);
-
-        //        var UserRole = await _context.UserRoles
-        //            .FirstOrDefaultAsync(e => e.UserId == userId);
-
-        //        if (role != null)
-        //            _context.UserRoles.Remove(UserRole);
-
-        //        await _context.SaveChangesAsync();
-
-        //        var result = await _userManager.DeleteAsync(user);
-
-        //        if (!result.Succeeded)
-        //            return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
-        //            {
-        //                Message = "User Deletion Failed"
-        //            });
-
-        //        return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
-        //        {
-        //            Message = "User Deleted Successfully"
-        //        });
-        //    }
-        //    else if (role == "Admin" || role == "SubAdmin")
-        //    {
-        //        var UserRole = await _context.UserRoles
-        //            .FirstOrDefaultAsync(e => e.UserId == userId);
-
-        //        if (role != null)
-        //            _context.UserRoles.Remove(UserRole);
-
-        //        await _context.SaveChangesAsync();
-
-        //        var result = await _userManager.DeleteAsync(user);
-
-        //        if (!result.Succeeded)
-        //            return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
-        //            {
-        //                Message = "User Deletion Failed"
-        //            });
-
-        //        return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
-        //        {
-        //            Message = "User Deleted Successfully"
-        //        });
-        //    }
-        //    return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
-        //    {
-        //        Message = "User Deletion Failed"
-        //    });
-        //}
-
-
         public async Task<ApiResponse<ConfirmationResponseDTO>> DeleteAccountAsync(int userId)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -2202,6 +2128,64 @@ namespace GoWork.Service.AccountService
                 {
                     Message = "An error occurred while resending Link."
                 });
+            }
+        }
+
+        /// <summary>
+        /// Deletes a Seeker and ALL related data in the correct order:
+        /// 1. Removes the Seeker row → DB cascades SeekerSkills, Applications (→ Interviews), Address.
+        /// 2. Removes the linked ApplicationUser via Identity → DB cascades UserNotifications, DeviceTokens, Feedbacks.
+        /// </summary>
+        public async Task<ApiResponse<ConfirmationResponseDTO>> DeleteCandidateAccountAsync(int userId)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var seeker = await _context.TbSeekers
+                    .FirstOrDefaultAsync(s => s.UserId == userId);
+
+                if (seeker is null)
+                    return new ApiResponse<ConfirmationResponseDTO>(404, "Candidate not found.");
+
+                // Capture the userId before removing seeker
+
+                // Step 1: Remove the Seeker.
+                // EF/DB cascade will automatically delete:
+                //   - SeekerSkills  (FK SeekerId → Seeker, CASCADE)
+                //   - Applications  (FK SeekerId → Seeker, CASCADE)
+                //       └── Interviews (FK ApplicationId → Application, CASCADE)
+                //   - Address       (1-to-1 FK AddressId → Address, CASCADE)
+                _context.TbSeekers.Remove(seeker);
+                await _context.SaveChangesAsync();
+
+                // Step 2: Remove the linked ApplicationUser.
+                // Identity's UserManager handles removing from AspNetUsers + AspNetUserRoles etc.
+                // EF/DB cascade will automatically delete:
+                //   - UserNotifications (FK UserId → ApplicationUser, CASCADE)
+                //   - DeviceTokens      (FK UserId → ApplicationUser, CASCADE)
+                //   - Feedbacks         (FK ReviewerId → ApplicationUser, CASCADE)
+                var appUser = await _userManager.FindByIdAsync(userId.ToString());
+                if (appUser is not null)
+                {
+                    var deleteResult = await _userManager.DeleteAsync(appUser);
+                    if (!deleteResult.Succeeded)
+                    {
+                        await transaction.RollbackAsync();
+                        var errors = string.Join(", ", deleteResult.Errors.Select(e => e.Description));
+                        return new ApiResponse<ConfirmationResponseDTO>(500, $"Failed to delete the user account: {errors}");
+                    }
+                }
+
+                await transaction.CommitAsync();
+                return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
+                {
+                    Message = "Candidate data have been deleted successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return new ApiResponse<ConfirmationResponseDTO>(500, $"An error occurred while deleting the Candidate: {ex.Message}");
             }
         }
     }
