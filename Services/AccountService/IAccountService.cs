@@ -73,6 +73,7 @@ namespace GoWork.Service.AccountService
         /// including the linked ApplicationUser and their notifications, device tokens, and feedbacks.
         /// </summary>
         Task<ApiResponse<ConfirmationResponseDTO>> DeleteCandidateAccountAsync(int userId);
+        Task<ApiResponse<bool>> CheckEmailExistsAsync(string email); 
 
         // Token
         string GenerateJwtToken(ApplicationUser user);

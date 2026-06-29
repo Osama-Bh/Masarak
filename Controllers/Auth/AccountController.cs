@@ -45,7 +45,7 @@ namespace GoWork.Controllers.Auth
             _emailService = emailService;
             _configuration = configuration;
             _accountService = accountService;
-            _frontendBaseUrl = configuration["Frontend:BaseUrl"];
+            _frontendBaseUrl = configuration["Frontend:BaseUrl"]!;
             _fileService = fileService;
         }
 
@@ -58,6 +58,24 @@ namespace GoWork.Controllers.Auth
           .ToListAsync();
 
             return Ok(emails);
+        }
+
+        [HttpGet("CheckEmailExists")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<bool>>> CheckEmailExists([FromQuery]string email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            var response = await _accountService.CheckEmailExistsAsync(email);
+            if (response.StatusCode != 200)
+            {
+                return StatusCode((int)response.StatusCode, response);
+            }
+
+            return Ok(response);
         }
 
         //[EnableRateLimiting("ResendPolicy")]
@@ -281,10 +299,10 @@ namespace GoWork.Controllers.Auth
                 {
                     return Ok(new EmployerResponseDTO
                     {
-                        Email = user.Email,
+                        Email = user.Email!,
                         Role = role,
                         Name = "Masarak",
-                        PhoneNumber = user.PhoneNumber
+                        PhoneNumber = user.PhoneNumber ?? ""
                     });
                 }
                 else if (role == "SubAdmin")

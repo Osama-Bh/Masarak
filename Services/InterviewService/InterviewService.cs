@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Hangfire;
 using GoWork.Infrastructure.Hangfire;
+using GoWork.Services.EmailService;
 
 namespace GoWork.Services.InterviewService
 {
@@ -23,13 +24,15 @@ namespace GoWork.Services.InterviewService
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         private readonly ICurrentUserService _currentUserService;
+        private readonly IEmailService _emailService;
 
-        public InterviewService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, ICurrentUserService currentUserService)
+        public InterviewService(ApplicationDbContext context, IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService, ICurrentUserService currentUserService, IEmailService emailService)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
             _currentUserService = currentUserService;
+            _emailService = emailService;
         }
 
         private TimeZoneInfo GetTimeZoneFromHeader()
@@ -410,28 +413,6 @@ namespace GoWork.Services.InterviewService
 
         public async Task<ApiResponse<CompanyInterviewFiltersDTO>> GetCompanyInterviewFiltersAsync(int employerId)
         {
-            // Get interview statuses
-            //var statuses = await _context.TbInterviewStatuses
-            //    .OrderBy(s => s.SortOrder)
-            //    .Select(s => new LookUpDTO { Id = s.Id, Name = s.Name })
-            //    .ToListAsync();
-
-            //var statuses = await _context.TbInterviewStatuses
-            //.Where(s =>
-            //    s.Id == (int)InterviewStatusEnum.Scheduled ||
-            //    s.Id == (int)InterviewStatusEnum.Completed || 
-            //    s.Id == (int) InterviewStatusEnum.Confirmed || 
-            //    s.Id == (int) InterviewStatusEnum.MissingInterview ||
-            //    s.Id == (int) InterviewStatusEnum.Cancelled || 
-            //    s.Id == (int)InterviewStatusEnum.Withdrawn)
-            //.OrderBy(s => s.SortOrder)
-            //.Select(s => new LookUpDTO
-            //{
-            //    Id = s.Id,
-            //    Name = s.Name
-            //})
-            //.ToListAsync();
-
             var statuses = await _context.TbInterviewStatuses
             .Where(s => s.IsActive)
             .OrderBy(s => s.SortOrder)
@@ -498,105 +479,204 @@ namespace GoWork.Services.InterviewService
         public async Task<ApiResponse<ConfirmationResponseDTO>> RescheduleInterviewAsync(
             int employerId, int interviewId, RescheduleInterviewRequestDTO dto)
         {
-            var interview = await _context.TbInterviews
-                .Include(i => i.Application)
-                    .ThenInclude(a => a.Job)
-                .FirstOrDefaultAsync(i => i.Id == interviewId && i.Application.Job.EmployerId == employerId);
+            var interviewData = await _context.TbInterviews
+            .Where(i => i.Id == interviewId &&
+                        i.Application.Job.EmployerId == employerId)
+            .Select(i => new
+            {
+                Interview = i,
+                CandidateEmail = i.Application.Seeker.ApplicationUser.Email,
+                CandidateName = i.Application.Seeker.FirsName + " " + i.Application.Seeker.LastName,
+                JobTitle = i.Application.Job.Title,
+                EmployerName = i.Application.Job.Employer.ComapnyName
+            })
+            .FirstOrDefaultAsync();
 
-            if (interview == null)
+            if (interviewData == null)
                 return new ApiResponse<ConfirmationResponseDTO>(404, "Interview not found.");
 
-            if (interview.InterviewStatusId != (int)InterviewStatusEnum.Scheduled)
-                return new ApiResponse<ConfirmationResponseDTO>(400,
+            if (interviewData.Interview.InterviewStatusId != (int)InterviewStatusEnum.Scheduled)
+                return new ApiResponse<ConfirmationResponseDTO>(
+                    400,
                     "Only interviews in Scheduled status can be rescheduled.");
 
-            // Validate interview date is in the future
+            // Convert local interview time to UTC
             var timeZoneInfo = GetTimeZoneFromHeader();
             var localDate = DateTime.SpecifyKind(dto.InterviewDate, DateTimeKind.Unspecified);
             var utcInterviewDate = TimeZoneInfo.ConvertTimeToUtc(localDate, timeZoneInfo);
 
             if (utcInterviewDate <= DateTime.UtcNow)
-                return new ApiResponse<ConfirmationResponseDTO>(400, "Interview date must be in the future.");
+                return new ApiResponse<ConfirmationResponseDTO>(
+                    400,
+                    "Interview date must be in the future.");
 
-            // Validate interview type exists
-            var interviewTypeExists = await _context.TbInterviewTypes.AnyAsync(t => t.Id == dto.InterviewTypeId);
-            if (!interviewTypeExists)
-                return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid interview type.");
+            if (!Enum.IsDefined(typeof(InterviewTypeEnum), dto.InterviewTypeId))
+                return new ApiResponse<ConfirmationResponseDTO>(
+                    400,
+                    "Invalid interview type.");
 
-            // Validate type-specific fields
+            string? countryName = null;
+            string? governateName = null;
+
             if (dto.InterviewTypeId == (int)InterviewTypeEnum.Online)
             {
                 if (string.IsNullOrWhiteSpace(dto.MeetingLink))
-                    return new ApiResponse<ConfirmationResponseDTO>(400,
+                    return new ApiResponse<ConfirmationResponseDTO>(
+                        400,
                         "Meeting link is required for online interviews.");
             }
             else if (dto.InterviewTypeId == (int)InterviewTypeEnum.InPerson)
             {
-                if (!dto.CountryId.HasValue || !dto.GovernateId.HasValue || string.IsNullOrWhiteSpace(dto.AddressLine))
-                    return new ApiResponse<ConfirmationResponseDTO>(400,
+                if (!dto.CountryId.HasValue ||
+                    !dto.GovernateId.HasValue ||
+                    string.IsNullOrWhiteSpace(dto.AddressLine))
+                {
+                    return new ApiResponse<ConfirmationResponseDTO>(
+                        400,
                         "Country, governate, and address line are required for in-person interviews.");
+                }
 
-                var countryExists = await _context.TbCountries.AnyAsync(c => c.Id == dto.CountryId.Value);
-                if (!countryExists)
-                    return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid country.");
+                var location = await _context.TbGovernates
+                    .Where(g => g.Id == dto.GovernateId &&
+                                g.CountryId == dto.CountryId)
+                    .Select(g => new
+                    {
+                        Governate = g.Name,
+                        Country = g.Country.Name
+                    })
+                    .FirstOrDefaultAsync();
 
-                var governateExists = await _context.TbGovernates
-                    .AnyAsync(g => g.Id == dto.GovernateId.Value && g.CountryId == dto.CountryId.Value);
-                if (!governateExists)
-                    return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid governate for the selected country.");
+                if (location == null)
+                    return new ApiResponse<ConfirmationResponseDTO>(
+                        400,
+                        "Invalid governate for the selected country.");
+
+                governateName = location.Governate;
+                countryName = location.Country;
             }
 
-            // Update interview details
-            interview.InterviewDate = utcInterviewDate;
-            interview.InterviewTypeId = dto.InterviewTypeId;
-            interview.Notes = dto.Notes;
-            interview.RespondedAt = null; // Reset candidate response
+            interviewData.Interview.InterviewDate = utcInterviewDate;
+            interviewData.Interview.InterviewTypeId = dto.InterviewTypeId;
+            interviewData.Interview.Notes = dto.Notes;
+            interviewData.Interview.RespondedAt = null;
+            interviewData.Interview.InterviewStatusId = (int)InterviewStatusEnum.Scheduled;
 
             if (dto.InterviewTypeId == (int)InterviewTypeEnum.Online)
             {
-                interview.MeetingLink = dto.MeetingLink;
-                interview.AddressId = null; // Clear address for online interview
-                var currentAddress = await _context.TbAddresses.FindAsync(interview.AddressId);
-                if (currentAddress != null)
+                interviewData.Interview.MeetingLink = dto.MeetingLink;
+
+                if (interviewData.Interview.AddressId.HasValue)
                 {
-                    _context.TbAddresses.Remove(currentAddress);
+                    var currentAddress = await _context.TbAddresses.FindAsync(interviewData.Interview.AddressId);
+                    if (currentAddress != null)
+                    {
+                        _context.TbAddresses.Remove(currentAddress);
+                    }
+                    interviewData.Interview.AddressId = null; // Clear address for online interview
                 }
             }
             else if (dto.InterviewTypeId == (int)InterviewTypeEnum.InPerson)
             {
-                interview.MeetingLink = null;
+                interviewData.Interview.MeetingLink = null;
 
-                var CurrentAddress = _context.TbAddresses.Find(dto.AddressId);
-
-                if (CurrentAddress != null)
+                if(interviewData.Interview.AddressId.HasValue)
                 {
-                    CurrentAddress.CountryId = dto.CountryId.Value;
-                    CurrentAddress.GovernateId = dto.GovernateId.Value;
-                    CurrentAddress.AddressLine1 = dto.AddressLine;
+                    var currentAddress = await _context.TbAddresses.FindAsync(interviewData.Interview.AddressId);
+                    if (currentAddress != null)
+                    {
+                        currentAddress.CountryId = dto.CountryId!.Value;
+                        currentAddress.GovernateId = dto.GovernateId!.Value;
+                        currentAddress.AddressLine1 = dto.AddressLine!;
+                    }
+                }
+                else
+                {
+                    var newAddress = new Address
+                    {
+                        CountryId = dto.CountryId!.Value,
+                        GovernateId = dto.GovernateId!.Value,
+                        AddressLine1 = dto.AddressLine!
+                    };
+                    _context.TbAddresses.Add(newAddress);
+                    interviewData.Interview.Address = newAddress;
                 }
             }
             else
             {
                 // Phone interview
-                interview.MeetingLink = dto.MeetingLink;
+                interviewData.Interview.MeetingLink = dto.MeetingLink;
             }
 
-            // Keep status as Scheduled (candidate must re-confirm)
-            interview.InterviewStatusId = (int)InterviewStatusEnum.Scheduled;
-
-            if (!string.IsNullOrEmpty(interview.ExpirationHangfireJobId))
+            if (!string.IsNullOrEmpty(interviewData.Interview.ExpirationHangfireJobId))
             {
-                BackgroundJob.Delete(interview.ExpirationHangfireJobId);
+                BackgroundJob.Delete(interviewData.Interview.ExpirationHangfireJobId);
             }
 
             var delay = utcInterviewDate - DateTime.UtcNow;
             var newHangfireJobId = BackgroundJob.Schedule<InterviewExpirationService>(
-                service => service.ExpireInterview(interview.Id),
+                service => service.ExpireInterview(interviewData.Interview.Id),
                 delay);
 
-            interview.ExpirationHangfireJobId = newHangfireJobId;
+            interviewData.Interview.ExpirationHangfireJobId = newHangfireJobId;
 
             await _context.SaveChangesAsync();
+
+            // Send email to candidate
+            if (!string.IsNullOrWhiteSpace(interviewData.CandidateEmail))
+            {
+                try
+                {
+                    string candidateName = interviewData.CandidateName.Trim();
+                    if (string.IsNullOrWhiteSpace(candidateName))
+                    {
+                        candidateName = "Candidate";
+                    }
+
+                    string interviewType = dto.InterviewTypeId switch
+                    {
+                        (int)InterviewTypeEnum.Online => "عبر الإنترنت (Online)",
+                        (int)InterviewTypeEnum.InPerson => "حضورياً (In-Person)",
+                        (int)InterviewTypeEnum.Phone => "عبر الهاتف (Phone)",
+                        _ => "جدول مقابلة"
+                    };
+
+                    string locationDetails = string.Empty;
+                    if (dto.InterviewTypeId == (int)InterviewTypeEnum.InPerson)
+                    {
+                        //var country = await _context.TbCountries.FindAsync(dto.CountryId!.Value);
+                        //var governate = await _context.TbGovernates.FindAsync(dto.GovernateId!.Value);
+                        locationDetails = $"{dto.AddressLine}, {governateName}, {countryName}";
+                    }
+                    else if (dto.InterviewTypeId == (int)InterviewTypeEnum.Online)
+                    {
+                        locationDetails = dto.MeetingLink ?? string.Empty;
+                    }
+
+                    string formattedDate = $"{utcInterviewDate:yyyy-MM-dd HH:mm} UTC";
+
+                    string emailContent = BuildInterviewEmailBody(
+                        candidateName,
+                        interviewData.JobTitle,
+                        interviewData.EmployerName,
+                        interviewType,
+                        formattedDate,
+                        locationDetails,
+                        dto.InterviewTypeId,
+                        dto.Notes);
+
+                    await _emailService.SendEmailAsync(
+                        interviewData.CandidateEmail,
+                        "تفاصيل المقابلة الشخصية المجدولة",
+                        emailContent,
+                        candidateName);
+                }
+                catch (Exception ex)
+                {
+                    // Log error or ignore to prevent the whole transaction from rolling back
+                    // Since the interview was already saved in DB and status updated.
+                    Console.WriteLine($"Error sending interview schedule email: {ex.Message}");
+                }
+            }
 
             return new ApiResponse<ConfirmationResponseDTO>(200,
                 new ConfirmationResponseDTO { Message = "Interview rescheduled successfully." });
@@ -668,6 +748,55 @@ namespace GoWork.Services.InterviewService
 
             return new ApiResponse<ConfirmationResponseDTO>(200,
                 new ConfirmationResponseDTO { Message = "Interview marked as missing." });
+        }
+
+        private string BuildInterviewEmailBody(
+            string candidateName,
+            string jobTitle,
+            string companyName,
+            string interviewType,
+            string formattedDate,
+            string? locationDetails,
+            int interviewTypeId,
+            string? notes)
+        {
+            string locationHtml = string.Empty;
+            if (!string.IsNullOrWhiteSpace(locationDetails))
+            {
+                if (interviewTypeId == (int)InterviewTypeEnum.Online)
+                {
+                    locationHtml = $@"<p style=""margin: 5px 0;""><strong>رابط الاجتماع:</strong> <a href=""{locationDetails}"" target=""_blank"" style=""color: #0199db;"">{locationDetails}</a></p>";
+                }
+                else
+                {
+                    locationHtml = $@"<p style=""margin: 5px 0;""><strong>العنوان / التفاصيل:</strong> {locationDetails}</p>";
+                }
+            }
+
+            string notesHtml = !string.IsNullOrWhiteSpace(notes)
+                ? $@"<p style=""margin: 5px 0;""><strong>ملاحظات:</strong> {notes}</p>"
+                : string.Empty;
+
+            return $@"
+            <div style=""direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #4b5563; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 8px;"">
+                <div style=""text-align: center; margin-bottom: 20px;"">
+                    <h3 style=""color: #0199db; margin: 0;"">دعوة لمقابلة شخصية</h3>
+                </div>
+                <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin-bottom: 20px;"" />
+                <p>مرحباً <strong>{candidateName}</strong>،</p>
+                <p>يسعدنا إبلاغك بأنه قد تم جدولة مقابلة شخصية لطلب التقديم الخاص بك لوظيفة <strong>{jobTitle}</strong> لدى شركة <strong>{companyName}</strong>.</p>
+                
+                <div style=""background-color: #f9fafb; border-right: 4px solid #02b5f1; padding: 15px; margin: 20px 0; border-radius: 8px;"">
+                    <p style=""margin: 5px 0;""><strong>نوع المقابلة:</strong> {interviewType}</p>
+                    <p style=""margin: 5px 0;""><strong>تاريخ ووقت المقابلة:</strong> {formattedDate}</p>
+                    {locationHtml}
+                    {notesHtml}
+                </div>
+
+                <p style=""font-size: 14px; color: #6b7280; margin-top: 20px;"">
+                    نتمنى لك التوفيق والنجاح في مقابلتك القادمة.
+                </p>
+            </div>";
         }
     }
 }
