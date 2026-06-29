@@ -39,146 +39,6 @@ namespace GoWork.Service.AccountService
             _frontendBaseUrl = configuration["Frontend:BaseUrl"];
         }
 
-        //public async Task<ApiResponse<ConfirmationResponseDTO>> CandidateRegisterAsync(CandidateRegistrationDTO registrationDTO)
-        //{
-        //    await using var transaction = await _context.Database.BeginTransactionAsync();
-
-        //    ApplicationUser user = null;
-        //    try
-        //    {
-        //        var categoryId = int.Parse(registrationDTO.InterstedInCategoryId);
-
-        //        if (_context.TbCategories.FirstOrDefault(c => c.Id == categoryId) is null)
-        //            return new ApiResponse<ConfirmationResponseDTO>(400, "Invalid category ID.");
-
-        //        user = new ApplicationUser
-        //        {
-        //            UserName = registrationDTO.Email,
-        //            Email = registrationDTO.Email,
-        //            PhoneNumber = registrationDTO.PhoneNumber,
-        //        };
-
-        //        var result = await _userManager.CreateAsync(user, registrationDTO.Password);
-
-        //        if (!result.Succeeded)
-        //            return new ApiResponse<ConfirmationResponseDTO>(400, "User creation failed! Please check user details and try again.");
-
-        //        // 2️⃣ Handle skills
-        //        var normalizedSkills = registrationDTO.ListOfSkills
-        //            .Select(s => s.Trim().ToLower())
-        //            .Distinct()
-        //            .ToList();
-
-        //        var existingSkills = _context.TbSkills
-        //            .Where(s => normalizedSkills.Contains(s.Name.ToLower()))
-        //            .ToList();
-
-        //        var existingSkillNames = existingSkills
-        //            .Select(s => s.Name.ToLower())
-        //            .ToHashSet();
-
-        //        var newSkills = normalizedSkills
-        //            .Where(s => !existingSkillNames.Contains(s))
-        //            .Select(s => new Skill { Name = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(s) })
-        //            .ToList();
-
-        //        _context.TbSkills.AddRange(newSkills);
-        //        var allSkills = existingSkills.Concat(newSkills).ToList();
-
-        //        string profilePhotoUrl = null;
-        //        if (registrationDTO.ProfilePhoto is not null)
-        //        {
-        //            var uploadResult = await _fileService.UploadAsync(registrationDTO.ProfilePhoto);
-        //            if (uploadResult is not null)
-        //            {
-        //                profilePhotoUrl = uploadResult.BlobUri;
-        //            }
-        //        }
-
-        //        string resumeUrl = null;
-        //        if (registrationDTO.Resume is not null)
-        //        {
-        //            var uploadResult = await _fileService.UploadAsync(registrationDTO.Resume);
-        //            if (uploadResult is not null)
-        //            {
-        //                resumeUrl = uploadResult.BlobUri;
-        //            }
-        //        }
-
-        //        var seeker = new Seeker
-        //        {
-        //            FirsName = registrationDTO.FirstName,
-        //            MiddleName = registrationDTO.MidName,
-        //            LastName = registrationDTO.LastName,
-        //            ProfilePhoto = profilePhotoUrl is null ? null : profilePhotoUrl,
-        //            ResumeUrl = resumeUrl is null ? null : resumeUrl,
-        //            SeekerSkills = allSkills.Select(skill => new SeekerSkill
-        //            {
-        //                Skill = skill
-        //            }).ToList(),
-        //            InterestCategoryId = categoryId,
-        //            UserId = user.Id
-        //        };
-
-        //        await _context.TbSeekers.AddAsync(seeker);
-        //        await _context.SaveChangesAsync();
-
-        //        await transaction.CommitAsync();
-
-        //        var confirmationToken = _userManager.GenerateEmailConfirmationTokenAsync(user).Result;
-
-        //        await _emailService.SendEmailAsync(user.Email, "Verify Your Email", $"<p>Hello {registrationDTO.FirstName},</p> <p>Please use the code below to verify your email address:</p> <div style=\"font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0; text-align: center;\"> {confirmationToken} </div> <p>This code is valid for a limited time.</p> <p style=\"font-size: 12px; color: #777;\"> If you didn’t create a GoWork account, you can safely ignore this email. </p> <p>— GoWork Team</p> </div>", registrationDTO.FirstName);
-
-        //        return new ApiResponse<ConfirmationResponseDTO>(201, new ConfirmationResponseDTO
-        //        {
-        //            Message = "There is a code have been sent to your email please check"
-        //        });
-        //    }
-        //    catch (Exception)
-        //    {
-        //        await transaction.RollbackAsync();
-
-        //        // 🔥 IMPORTANT: cleanup Identity user manually
-        //        if (user != null)
-        //        {
-        //            await _userManager.DeleteAsync(user);
-        //        }
-
-        //        // Log ex here (ILogger)
-
-        //        return new ApiResponse<ConfirmationResponseDTO>(
-        //            500,
-        //            "Registration failed. Please try again."
-        //        );
-        //    }
-
-
-        //}
-
-        //private static string BuildArabicTemplate(string title, string bodyContent)
-        //{
-        //    return $@"
-        //    <!DOCTYPE html>
-        //    <html lang='ar'>
-        //    <head>
-        //      <meta charset='UTF-8'>
-        //    </head>
-        //    <body style='font-family: Arial, sans-serif; background-color:#f4f6f8; padding:20px; direction:rtl;'>
-        //      <div style='max-width:600px; margin:auto; background:#ffffff; padding:30px; border-radius:8px; text-align:right;'>
-
-        //        <h2 style='color:#333;'>{title}</h2>
-
-        //        {bodyContent}
-
-        //        <p style='color:#aaa; font-size:12px;text-align:left; direction:ltr;'>
-        //          © Masarak.
-        //        </p>
-
-        //      </div>
-        //    </body>
-        //    </html>";
-        //}
-
         public async Task<ApiResponse<ConfirmationResponseDTO>> CandidateRegisterAsync(CandidateRegistrationDTO registrationDTO)
         {
             await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -364,7 +224,7 @@ namespace GoWork.Service.AccountService
 
                 if (dto.LastName != null)
                     candidate.LastName = dto.LastName;
-                
+
                 if (dto.InterstedInCategoryId != null && _context.TbCategories.Any(c => c.Id == dto.InterstedInCategoryId.Value))
                     candidate.InterestCategoryId = dto.InterstedInCategoryId.Value;
 
@@ -578,54 +438,6 @@ namespace GoWork.Service.AccountService
             await _context.SaveChangesAsync();
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO { Message = "Address saved successfully." });
         }
-
-        //public async Task<ApiResponse<ConfirmationResponseDTO>> RegisterCompany(EmpolyerRegistrationDTO registrationDTO)
-        //{
-
-        //    var user = new ApplicationUser
-        //    {
-        //        UserName = registrationDTO.Email,
-        //        Email = registrationDTO.Email,
-        //        PhoneNumber = registrationDTO.PhoneNumber,
-        //    };
-
-        //    var result = await _userManager.CreateAsync(user, registrationDTO.Password);
-
-        //    if (!result.Succeeded)
-        //        return new ApiResponse<ConfirmationResponseDTO>(400, "User creation failed! Please check user details and try again.");
-
-        //    string logoUrl = null;
-        //    if (registrationDTO.LogoUrl is not null)
-        //    {
-        //        var uploadResult = await _fileService.UploadAsync(registrationDTO.LogoUrl);
-        //        if (uploadResult is not null)
-        //        {
-        //            logoUrl = uploadResult.BlobUri;
-        //        }
-        //    }
-
-        //    var employer = new Employer
-        //    {
-        //        UserId = user.Id,
-        //        ComapnyName = registrationDTO.CompanyName,
-        //        Industry = registrationDTO.Industry,
-        //        LogoUrl = logoUrl,
-        //        EmployerStatusId = (int)EmployerStatusEnum.PendingApproval,
-        //    };
-
-
-        //    await _context.TbEmployers.AddAsync(employer);
-        //    await _context.SaveChangesAsync();
-
-        //    var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
-        //    await _emailService.SendEmailAsync(user.Email, "Verify Your Email", $"<p>Hello {registrationDTO.CompanyName},</p> <p>Please use the code below to verify your email address:</p> <div style=\"font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0; text-align: center;\"> {confirmationToken} </div> <p>This code is valid for a limited time.</p> <p style=\"font-size: 12px; color: #777;\"> If you didn’t create a GoWork account, you can safely ignore this email. </p> <p>— GoWork Team</p> </div>", registrationDTO.CompanyName);
-        //    return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
-        //    {
-        //        Message = "There is a code have been sent to your email please check"
-        //    });
-        //}
-
         public async Task<ApiResponse<ConfirmationResponseDTO>> RegisterCompany(EmpolyerRegistrationDTO registrationDTO)
         {
             var UserFound = await _userManager.FindByEmailAsync(registrationDTO.Email);
@@ -710,7 +522,7 @@ namespace GoWork.Service.AccountService
 
             //await _emailService.SendEmailAsync(user.Email, "Verify Your Email", htmlBody, registrationDTO.Name);
 
-            await _emailService.SendEmailAsync(user.Email,"Verify Your Email",content,registrationDTO.Name);
+            await _emailService.SendEmailAsync(user.Email, "Verify Your Email", content, registrationDTO.Name);
             return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
             {
                 Message = "There is a code have been sent to your email please check"
@@ -791,43 +603,6 @@ namespace GoWork.Service.AccountService
             });
         }
 
-        //public async Task<ApiResponse<EmployerResponseDTO>> VerifyAdminEmail(EmailConfirmationDTO confirmationDTO)
-        //{
-        //    if (string.IsNullOrEmpty(confirmationDTO.Email) || string.IsNullOrEmpty(confirmationDTO.EmailConfirmationCode))
-        //        return new ApiResponse<EmployerResponseDTO>(400, "Email or Confimation Code is missing !");
-
-        //    var user = await _userManager.FindByEmailAsync(confirmationDTO.Email);
-
-        //    if (user is null)
-        //    {
-        //        return new ApiResponse<EmployerResponseDTO>(400, "User Not Found.");
-        //    }
-
-        //    var isVerfied = await _userManager.ConfirmEmailAsync(user, confirmationDTO.EmailConfirmationCode);
-
-        //    if (isVerfied.Succeeded)
-        //    {
-
-        //        await _userManager.AddToRoleAsync(user, "Admin");
-                
-
-        //        //var downLoadResult = _fileService.DownloadUrlAsync(company.LogoUrl);
-        //        return new ApiResponse<EmployerResponseDTO>(200, new EmployerResponseDTO
-        //        {
-        //            Email = user.Email,
-        //            //SasUrl = downLoadResult.SasUrl,
-        //            //ExpiresAt = downLoadResult.ExpiresAt,
-        //            Role = "Admin",
-        //            CompanyName = user.UserName,
-        //            PhoneNumber = user.PhoneNumber
-        //        });
-        //    }
-        //    else
-        //    {
-        //        return new ApiResponse<EmployerResponseDTO>(400, "Email verification failed. Please check the confirmation code and try again.");
-        //    }
-        //}
-
         public async Task<ApiResponse<CandidateResponseDTO2>> VerifyEmail(EmailConfirmationDTO confirmationDTO)
         {
             if (string.IsNullOrEmpty(confirmationDTO.Email) || string.IsNullOrEmpty(confirmationDTO.EmailConfirmationCode))
@@ -872,7 +647,7 @@ namespace GoWork.Service.AccountService
                     Role = "Candidate",
                     Token = GenerateJwtToken(user)
                 });
-                
+
             }
             else
             {
@@ -882,7 +657,7 @@ namespace GoWork.Service.AccountService
 
         public async Task<ApiResponse<LoginResponseDTO>> Login(LoginDTO loginDTO)
         {
-            
+
             var user = await _userManager.FindByEmailAsync(loginDTO.Email);
 
             if (user is null)
@@ -971,60 +746,6 @@ namespace GoWork.Service.AccountService
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
-        // Added 
-        //public async Task<ApiResponse<EmployerResponseDTO>> LoginCompany(LoginDTO loginDTO)
-        //{
-        //    var user = await _userManager.FindByEmailAsync(loginDTO.Email);
-
-        //    if (user is null)
-        //        return new ApiResponse<EmployerResponseDTO>(404, "User not found.");
-
-        //    if (!await _userManager.CheckPasswordAsync(user, loginDTO.Password))
-        //        return new ApiResponse<EmployerResponseDTO>(400, "Invalid password.");
-
-        //    if (!await _userManager.IsEmailConfirmedAsync(user))
-        //        return new ApiResponse<EmployerResponseDTO>(401, "Email is not confirmed. Please verify your email before logging in.");
-
-        //    var roles = await _userManager.GetRolesAsync(user);
-        //    var role = roles.FirstOrDefault() ?? "Unknown";
-
-        //    //var token = GenerateJwtToken(user);
-
-        //    if(role == "Company")
-        //    {
-        //        var company = _context.TbEmployers.FirstOrDefault(c => c.UserId == user.Id);
-
-        //        if (company == null)
-        //            return new ApiResponse<EmployerResponseDTO>(404, "Employer info not found for this user.");
-
-        //        var downLoadResult = _fileService.DownloadUrlAsync(company.LogoUrl);
-
-
-
-        //        return new ApiResponse<EmployerResponseDTO>(200, new EmployerResponseDTO
-        //        {
-        //            EmployerId = company.Id,
-        //            Email = user.Email,
-        //            SasUrl = downLoadResult.SasUrl,
-        //            ExpiresAt = downLoadResult.ExpiresAt,
-        //            //Role = "Company",
-        //            Role = role,
-        //            CompanyName = company.ComapnyName
-        //        });
-        //    }
-        //    else
-        //    {
-        //        // For other roles, return minimal info without company details
-        //        return new ApiResponse<EmployerResponseDTO>(200, new EmployerResponseDTO
-        //        {
-        //            EmployerId = user.Id, // or null if your DTO supports it
-        //            Email = user.Email,
-        //            Role = role
-        //        });
-        //    }
-
-        //}
 
         public async Task<ApiResponse<EmployerResponseDTO>> LoginCompany(LoginDTO loginDTO)
         {
@@ -1145,7 +866,7 @@ namespace GoWork.Service.AccountService
 
             if (!await _userManager.IsEmailConfirmedAsync(user))
             {
-                if(role== "Admin")
+                if (role == "Admin")
                 {
                     var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
@@ -1294,31 +1015,8 @@ namespace GoWork.Service.AccountService
                     Name = user.Name
                 });
             }
-                return new ApiResponse<EmployerResponseDTO>(404, "البريد الإلكتروني أو كلمة المرور غير صحيحة");
+            return new ApiResponse<EmployerResponseDTO>(404, "البريد الإلكتروني أو كلمة المرور غير صحيحة");
         }
-
-        //public async Task<ApiResponse<ConfirmationResponseDTO>> ForgetPassword(ForgetPasswordDTO forgetpasswordDTO)
-        //{
-
-        //    var user = await _userManager.FindByEmailAsync(forgetpasswordDTO.Email);
-
-        //    if (user == null || !await _userManager.IsEmailConfirmedAsync(user))
-        //        return new ApiResponse<ConfirmationResponseDTO>(400,"Invalid request"); // Prevent account enumeration
-
-        //    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-        //    //var encodedToken = WebUtility.UrlEncode(token);
-        //    var encodedToken = Convert.ToBase64String(Encoding.UTF8.GetBytes(token));
-
-        //    var resetUrl = $"{_frontendBaseUrl}?email={forgetpasswordDTO.Email}&token={encodedToken}";
-
-        //    await _emailService.SendEmailAsync(forgetpasswordDTO.Email, "Reset Password", $"Click here: {resetUrl}");
-
-        //    return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
-        //    {
-        //        Message = "There is a link have been sent to your email please check"
-        //    });
-
-        //}
 
         public async Task<ApiResponse<ConfirmationResponseDTO>> ForgetPassword(ForgetPasswordDTO forgetpasswordDTO, string clientType)
         {
@@ -1333,7 +1031,7 @@ namespace GoWork.Service.AccountService
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             //var encodedToken = WebUtility.UrlEncode(token);
-            
+
 
             var content = string.Empty;
             if (clientType == "web")
@@ -1392,7 +1090,7 @@ namespace GoWork.Service.AccountService
 
 
 
-               
+
             }
             else
             {
@@ -1754,7 +1452,7 @@ namespace GoWork.Service.AccountService
         }
 
 
-        public async Task<ApiResponse<ConfirmationResponseDTO>> ChangePasswordAsync(int userId,ChangePasswordDTO changePasswordDto)
+        public async Task<ApiResponse<ConfirmationResponseDTO>> ChangePasswordAsync(int userId, ChangePasswordDTO changePasswordDto)
         {
             try
             {
@@ -1789,7 +1487,7 @@ namespace GoWork.Service.AccountService
             }
         }
 
-        public async Task<ApiResponse<ConfirmationResponseDTO>>UpdateCompanyProfileAsync(int userId, UpdateCompanyProfileDTO dto)
+        public async Task<ApiResponse<ConfirmationResponseDTO>> UpdateCompanyProfileAsync(int userId, UpdateCompanyProfileDTO dto)
         {
             try
             {
@@ -1811,22 +1509,22 @@ namespace GoWork.Service.AccountService
                     });
 
                 // Update fields
-                if(user.PhoneNumber != dto.PhoneNumber)
+                if (user.PhoneNumber != dto.PhoneNumber)
                 {
                     user.PhoneNumber = dto.PhoneNumber;
                 }
-                if(employer.Industry != dto.Industry)
+                if (employer.Industry != dto.Industry)
                 {
                     employer.Industry = dto.Industry;
                 }
-                if(employer.ComapnyName != dto.Name)
+                if (employer.ComapnyName != dto.Name)
                 {
                     employer.ComapnyName = dto.Name;
                 }
 
                 if (dto.isLogoChanged)
                 {
-                    if(dto.isLogoDeleted)
+                    if (dto.isLogoDeleted)
                     {
                         employer.LogoUrl = null;
                     }
@@ -1845,7 +1543,7 @@ namespace GoWork.Service.AccountService
 
                 await _context.SaveChangesAsync();
 
-                
+
 
                 return new ApiResponse<ConfirmationResponseDTO>(200, new ConfirmationResponseDTO
                 {
@@ -1854,9 +1552,9 @@ namespace GoWork.Service.AccountService
             }
             catch (Exception)
             {
-                return new ApiResponse<ConfirmationResponseDTO>(500,new ConfirmationResponseDTO
+                return new ApiResponse<ConfirmationResponseDTO>(500, new ConfirmationResponseDTO
                 {
-                    Message = "An error occurred while updating the profile." 
+                    Message = "An error occurred while updating the profile."
                 });
             }
         }
@@ -1919,23 +1617,23 @@ namespace GoWork.Service.AccountService
 
                 if (user.EmailConfirmed)
                 {
-                    return new ApiResponse<ConfirmationResponseDTO>(400,new ConfirmationResponseDTO
+                    return new ApiResponse<ConfirmationResponseDTO>(400, new ConfirmationResponseDTO
                     {
                         Message = "Email already verified."
                     });
                 }
 
-                
+
 
                 var confirmationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                 var company = _context.TbEmployers.FirstOrDefault(c => c.UserId == user.Id);
                 var content = "";
 
-                if(company is not null)
+                if (company is not null)
                 {
                     // This if the user that try to resend the otp to is company
 
-                     content = $@"
+                    content = $@"
 
                       <div style=""padding: 30px; text-align: right"">
                         <div style=""color: #4b5563; line-height: 1.8; font-size: 16px"">
@@ -2028,7 +1726,7 @@ namespace GoWork.Service.AccountService
             }
             catch (Exception)
             {
-                return new ApiResponse<ConfirmationResponseDTO>(500,new ConfirmationResponseDTO
+                return new ApiResponse<ConfirmationResponseDTO>(500, new ConfirmationResponseDTO
                 {
                     Message = "An error occurred while resending OTP."
                 });
@@ -2186,6 +1884,19 @@ namespace GoWork.Service.AccountService
             {
                 await transaction.RollbackAsync();
                 return new ApiResponse<ConfirmationResponseDTO>(500, $"An error occurred while deleting the Candidate: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> CheckEmailExistsAsync(string email)
+        {
+            try
+            {
+                var exists = await _context.Users.AnyAsync(u => u.Email == email);
+                return new ApiResponse<bool>(200, exists);
+            }
+            catch (Exception)
+            {
+                return new ApiResponse<bool>(500, false);
             }
         }
     }

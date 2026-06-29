@@ -6,15 +6,16 @@ using GoWork.DTOs.ApplicationDTOs;
 using GoWork.DTOs.CompanyApplicationDTOs;
 using GoWork.DTOs.DashboardDTOs;
 using GoWork.Enums;
+using GoWork.Infrastructure.Hangfire;
 using GoWork.Models;
 using GoWork.Services.CurrentUserService;
-using GoWork.Services.FileService;
 using GoWork.Services.EmailService;
+using GoWork.Services.FileService;
+using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Hangfire;
-using GoWork.Infrastructure.Hangfire;
+using System.Drawing;
 
 namespace GoWork.Services.ApplicationService
 {
@@ -613,7 +614,7 @@ namespace GoWork.Services.ApplicationService
                         locationDetails = dto.MeetingLink ?? string.Empty;
                     }
 
-                    string formattedDate = dto.InterviewDate.ToString("yyyy-MM-dd hh:mm tt");
+                    string formattedDate = $"{utcInterviewDate:yyyy-MM-dd HH:mm} UTC";
 
                     string emailContent = BuildInterviewEmailBody(
                         candidateName,
@@ -627,7 +628,7 @@ namespace GoWork.Services.ApplicationService
 
                     await _emailService.SendEmailAsync(
                         appData.CandidateEmail,
-                        "تفاصيل المقابلة الشخصية المجدولة - منصة مسارك",
+                        "تفاصيل المقابلة الشخصية المجدولة",
                         emailContent,
                         candidateName);
                 }
@@ -673,7 +674,7 @@ namespace GoWork.Services.ApplicationService
             return $@"
             <div style=""direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #4b5563; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 8px;"">
                 <div style=""text-align: center; margin-bottom: 20px;"">
-                    <h2 style=""color: #0199db; margin: 0;"">دعوة لمقابلة شخصية - منصة مسارك</h2>
+                    <h3 style=""color: #0199db; margin: 0;"">دعوة لمقابلة شخصية</h3>
                 </div>
                 <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin-bottom: 20px;"" />
                 <p>مرحباً <strong>{candidateName}</strong>،</p>
@@ -689,10 +690,11 @@ namespace GoWork.Services.ApplicationService
                 <p style=""font-size: 14px; color: #6b7280; margin-top: 20px;"">
                     نتمنى لك التوفيق والنجاح في مقابلتك القادمة.
                 </p>
-                <p style=""font-size: 12px; color: #9ca3af; text-align: center; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 15px;"">
-                    هذه رسالة تلقائية من منصة مسارك، الرجاء عدم الرد عليها مباشرة.
-                </p>
+                
             </div>";
+            //< p style = ""font - size: 12px; color: #9ca3af; text-align: center; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 15px;"">
+            //        هذه رسالة تلقائية من منصة مسارك، الرجاء عدم الرد عليها مباشرة.
+            //    </ p >
         }
     }
 }

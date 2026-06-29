@@ -71,10 +71,14 @@ namespace GoWork.Controllers
         }
 
         [HttpGet("InterviewStatuses")]
-        public string GetInterviewsStatuses()
+        public IActionResult GetInterviewsStatuses()
         {
-            var InterviewStatuses = string.Join(", ", _context.TbInterviewStatuses.Select(s => s.Name).ToList());
-            return InterviewStatuses;
+            var interviewStatuses = _context.TbInterviewStatuses.Select(s => new
+            {
+                s.Name,
+                s.IsActive
+            }).ToList();
+            return Ok(interviewStatuses);
         }
 
         [HttpPost("pushnotification")]
