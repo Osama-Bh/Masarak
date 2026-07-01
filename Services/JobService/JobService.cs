@@ -424,7 +424,7 @@ namespace GoWork.Services.JobService
 
             // 2. Fetch pre-filtered jobs via SP
             var preFilteredJobs = await _context.Database.SqlQueryRaw<PreFilteredJobDTO>(
-                "EXEC sp_GetPreFilteredJobs_ForAI @p0", seekerId)
+                "EXEC sp_GetPreFilteredJobs_ForAI_Updated @p0", seekerId)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -433,7 +433,7 @@ namespace GoWork.Services.JobService
                 return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
             }
 
-            List<int> rankedIds;
+            HashSet<int> rankedIds;
 
             var apiKey = _configuration["OpenAI:ApiKey"];
 
@@ -442,7 +442,7 @@ namespace GoWork.Services.JobService
                 rankedIds = preFilteredJobs
                     .OrderByDescending(j => j.PostedDate)
                     .Select(j => j.Id)
-                    .ToList();
+                    .ToHashSet();
             }
             else
             {
@@ -494,7 +494,7 @@ namespace GoWork.Services.JobService
                     Jobs:
                     {jobsJson}";
 
-                    var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
+                    var modelName = "gpt-5.4-2026-03-05";  //_configuration["OpenAI:Model"] ?? "gpt-4o-mini";
                     var chatClient = new ChatClient(modelName, apiKey);
 
                     var options = new ChatCompletionOptions
@@ -525,14 +525,14 @@ namespace GoWork.Services.JobService
                             .Where(r => validIds.Contains(r.JobId))
                             .OrderByDescending(r => r.Score)
                             .Select(r => r.JobId)
-                            .ToList();
+                            .ToHashSet();
                     }
                     else
                     {
                         rankedIds = preFilteredJobs
                             .OrderByDescending(j => j.PostedDate)
                             .Select(j => j.Id)
-                            .ToList();
+                            .ToHashSet();
                     }
                 }
                 catch (Exception ex)
@@ -542,7 +542,7 @@ namespace GoWork.Services.JobService
                     rankedIds = preFilteredJobs
                         .OrderByDescending(j => j.PostedDate)
                         .Select(j => j.Id)
-                        .ToList();
+                        .ToHashSet();
                 }
             }
 
@@ -1139,8 +1139,8 @@ namespace GoWork.Services.JobService
             //}
 
             var alreadyApplied = await _context.TbApplications.AnyAsync(a => a.JobId == jobId && a.SeekerId == seekerId && 
-            a.ApplicationStatusId != (int)ApplicationStatusEnum.PendingReview && a.ApplicationStatusId != (int)ApplicationStatusEnum.Shortlisted &&
-            a.ApplicationStatusId != (int)ApplicationStatusEnum.Hired && a.ApplicationStatusId != (int)ApplicationStatusEnum.Interviewed);
+            a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview && a.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted &&
+            a.ApplicationStatusId == (int)ApplicationStatusEnum.Hired && a.ApplicationStatusId == (int)ApplicationStatusEnum.Interviewed);
             if (alreadyApplied)
             {
                 return new ApiResponse<ApplicationResultDto>(400, "You have already applied for this job.");
