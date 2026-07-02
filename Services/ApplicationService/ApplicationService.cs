@@ -459,19 +459,48 @@ namespace GoWork.Services.ApplicationService
 
         public async Task<ApiResponse<ConfirmationResponseDTO>> HireApplicationAsync(int employerId, int applicationId)
         {
-            var application = await _context.TbApplications
-                .Include(a => a.Job)
-                .FirstOrDefaultAsync(a => a.Id == applicationId && a.Job.EmployerId == employerId);
+            var appData = await _context.TbApplications
+                .Where(a => a.Id == applicationId && a.Job.EmployerId == employerId)
+                .Select(a => new
+                {
+                    Application = a,
+                    CandidateEmail = a.Seeker.ApplicationUser.Email,
+                    CandidateFirstName = a.Seeker.FirsName,
+                    CandidateLastName = a.Seeker.LastName,
+                    JobTitle = a.Job.Title,
+                    CompanyName = a.Job.Employer.ComapnyName
+                })
+                .FirstOrDefaultAsync();
 
-            if (application == null)
+            if (appData == null)
                 return new ApiResponse<ConfirmationResponseDTO>(404, "Application not found.");
 
-            if (application.ApplicationStatusId != (int)ApplicationStatusEnum.Interviewed)
+            if (appData.Application.ApplicationStatusId != (int)ApplicationStatusEnum.Interviewed)
                 return new ApiResponse<ConfirmationResponseDTO>(400,
                     "Only applications in Interviewed status can be hired.");
 
-            application.ApplicationStatusId = (int)ApplicationStatusEnum.Hired;
+            appData.Application.ApplicationStatusId = (int)ApplicationStatusEnum.Hired;
             await _context.SaveChangesAsync();
+
+            try
+            {
+                var candidateName = $"{appData.CandidateFirstName} {appData.CandidateLastName}".Trim();
+                if (!string.IsNullOrEmpty(appData.CandidateEmail))
+                {
+                    string emailSubject = "تهانينا! تم قبول طلب التوظيف الخاص بك";
+                    string emailBody = BuildHiredEmailBody(candidateName, appData.JobTitle, appData.CompanyName);
+
+                    await _emailService.SendEmailAsync(
+                        appData.CandidateEmail,
+                        emailSubject,
+                        emailBody,
+                        candidateName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending hire notification email: {ex.Message}");
+            }
 
             return new ApiResponse<ConfirmationResponseDTO>(200,
                 new ConfirmationResponseDTO { Message = "Candidate hired successfully." });
@@ -695,6 +724,34 @@ namespace GoWork.Services.ApplicationService
             //< p style = ""font - size: 12px; color: #9ca3af; text-align: center; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 15px;"">
             //        هذه رسالة تلقائية من منصة مسارك، الرجاء عدم الرد عليها مباشرة.
             //    </ p >
+        }
+
+        private string BuildHiredEmailBody(
+            string candidateName,
+            string jobTitle,
+            string companyName)
+        {
+            return $@"
+            <div style=""direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #4b5563; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; border-radius: 8px;"">
+                <div style=""text-align: center; margin-bottom: 20px;"">
+                    <h3 style=""color: #0199db; margin: 0; font-size: 24px;"">تهانينا على قبولك! 🎉</h3>
+                </div>
+                <hr style=""border: 0; border-top: 1px solid #e5e7eb; margin-bottom: 20px;"" />
+                <p>مرحباً <strong>{candidateName}</strong>،</p>
+                <p>يسعدنا جداً إبلاغك بأنه قد تم قبولك وتعيينك لوظيفة <strong>{jobTitle}</strong> لدى شركة <strong>{companyName}</strong>.</p>
+                
+                <div style=""background-color: #ecfdf5; border-right: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 8px;"">
+                    <p style=""margin: 5px 0; color: #065f46;""><strong>حالة الطلب:</strong> تم التوظيف (Hired)</p>
+                    <p style=""margin: 5px 0; color: #065f46;""><strong>الوظيفة:</strong> {jobTitle}</p>
+                    <p style=""margin: 5px 0; color: #065f46;""><strong>الشركة:</strong> {companyName}</p>
+                </div>
+
+                <p>سيقوم فريق الموارد البشرية لدى الشركة بالتواصل معك قريباً لمناقشة الخطوات التالية وتفاصيل العقد.</p>
+
+                <p style=""font-size: 14px; color: #6b7280; margin-top: 20px;"">
+                    نتمنى لك كل التوفيق والنجاح في مسيرتك المهنية الجديدة!
+                </p>
+            </div>";
         }
     }
 }
