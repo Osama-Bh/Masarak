@@ -586,204 +586,6 @@ namespace GoWork.Services.JobService
 
             return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
         }
-        //public async Task<ApiResponse<JobRecommendationResultDto>> GetJobRecommendationsAsync(int seekerId)
-        //{
-        //    // 1. Fetch seeker and validate
-        //    //var seeker = await _context.TbSeekers
-        //    //    .Include(s => s.InterestCategory)
-        //    //    .Include(s => s.SeekerSkills).ThenInclude(ss => ss.Skill)
-        //    //    .Include(s => s.Applications!).ThenInclude(a => a.Interviews)
-        //    //    .FirstOrDefaultAsync(s => s.Id == seekerId);
-
-        //    var seeker = await _context.TbSeekers
-        //        .Where(s => s.Id == seekerId)
-        //        .Select(s => new
-        //        {
-        //            FullName = s.FirsName + " " + s.MiddleName + " " + s.LastName,
-
-        //            Skills = s.SeekerSkills
-        //                    .Select(ss => new
-        //                    {
-        //                        Id = ss.Skill.Id,
-        //                        Name = ss.Skill.Name
-        //                    })
-        //                    .ToList(),
-
-        //            categoryName = s.InterestCategory.Name,
-
-        //            ApplicationsCount = s.Applications!.Count(),
-        //            PendingApplicationsCout = s.Applications!.Count(a => a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview),
-
-        //            ScheduledInterviewsCount = s.Applications!
-        //                    .SelectMany(a => a.Interviews!)
-        //                    .Count(i => i.InterviewStatusId == (int)InterviewStatusEnum.Scheduled)
-        //        })
-        //        .FirstOrDefaultAsync();
-
-        //    if (seeker == null)
-        //    {
-        //        return new ApiResponse<JobRecommendationResultDto>(404, "Seeker not found.");
-        //    }
-
-        //    //var nameParts = new[] { seeker.FirsName, seeker.MiddleName, seeker.LastName }
-        //    //    .Where(n => !string.IsNullOrWhiteSpace(n));
-
-        //    var responseDto = new JobRecommendationResultDto
-        //    {
-        //        SeekerFullName = seeker.FullName,
-        //        TotalApplicationsCount = seeker.ApplicationsCount,
-        //        PendingReviewApplicationsCount = seeker.PendingApplicationsCout,
-        //        TotalInterviewsCount = seeker.ScheduledInterviewsCount
-        //    };
-
-        //    // 2. Fetch pre-filtered jobs via SP (up to 30 jobs for AI)
-        //    var preFilteredJobs = await _context.Database.SqlQueryRaw<PreFilteredJobDTO>(
-        //        "EXEC sp_GetPreFilteredJobs_ForAI @p0", seekerId)
-        //        .AsNoTracking()
-        //        .ToListAsync();
-
-        //    if (!preFilteredJobs.Any())
-        //    {
-        //        return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
-        //    }
-
-        //    // 3. Determine ranked order of job IDs
-        //    List<int> rankedIds;
-
-        //    var apiKey = _configuration["OpenAI:ApiKey"];
-        //    if (string.IsNullOrWhiteSpace(apiKey))
-        //    {
-        //        // Fallback: sort by posted date descending
-        //        rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
-        //    }
-        //    else
-        //    {
-        //        try
-        //        {
-        //            // 4. Construct JSON objects for AI prompt
-        //            var candidateProfile = new
-        //            {
-        //                skills = seeker.Skills?.Select(ss => ss.Name).ToList() ?? new List<string>(),
-        //                categoryName = seeker.categoryName ?? "General"
-        //            };
-
-        //            var jobsList = preFilteredJobs.Select(j => new
-        //            {
-        //                job_id = j.Id,
-        //                title = j.Title,
-        //                description = j.Description,
-        //                required_skills = string.IsNullOrWhiteSpace(j.RequiredSkills) ? new List<string>() : j.RequiredSkills.Split(',').Select(s => s.Trim()).ToList()
-        //            });
-
-        //            var candidateJson = JsonSerializer.Serialize(candidateProfile);
-        //            var jobsJson = JsonSerializer.Serialize(jobsList);
-
-        //            var preFilteredJobsCount = preFilteredJobs.Count;
-
-        //            var prompt = $@"
-        //            You are an expert AI recruiter. Your task is to evaluate and rank a list of jobs based on how well they match a candidate's profile.
-
-        //            Exactly {preFilteredJobsCount} jobs are provided.
-
-        //            The output MUST satisfy ALL of these rules:
-
-        //            1. Output exactly {preFilteredJobsCount} objects.
-        //            2. Each object must correspond to one input job.
-        //            3. Every input job ID must appear exactly once.
-        //            4. Never invent new IDs.
-        //            5. Never duplicate IDs.
-        //            6. Never omit IDs.
-
-        //            Return ONLY a valid JSON object in this exact format:
-        //            {{
-        //              ""ranked_jobs"": [
-        //                {{ ""job_id"": 10, ""score"": 9 }},
-        //                {{ ""job_id"": 11, ""score"": 7 }}
-        //              ]
-        //            }}
-
-        //            Do not include any explanations, markdown formatting, or text outside the JSON.
-
-        //            Candidate Data:
-        //            {candidateJson}
-
-        //            Jobs Data:
-        //            {jobsJson}";
-
-        //            // 5. Call OpenAI
-        //            var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
-        //            var chatClient = new ChatClient(modelName, apiKey);
-
-        //            var options = new ChatCompletionOptions
-        //            {
-        //                Temperature = 0,
-        //                ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat()
-        //            };
-
-        //            var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new SystemChatMessage(prompt) }, options);
-        //            var aiContent = completion.Value.Content[0].Text;
-
-        //            var resultDto = JsonSerializer.Deserialize<AIJobRankingResponseDTO>(aiContent);
-
-        //            if (resultDto?.RankedJobs != null && resultDto.RankedJobs.Any())
-        //            {
-        //                rankedIds = resultDto.RankedJobs
-        //                    .OrderByDescending(r => r.Score)
-        //                    .Select(r => r.JobId)
-        //                    .ToList();
-        //            }
-        //            else
-        //            {
-        //                // AI returned nothing useful — fallback
-        //                rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
-        //            }
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            Console.WriteLine($"AI Recommendation Failed: {ex.Message}");
-        //            rankedIds = preFilteredJobs.OrderByDescending(j => j.PostedDate).Select(j => j.Id).ToList();
-        //        }
-        //    }
-
-        //    // 6. Enrich with full card data from EF
-        //    var enriched = await _context.TbJobs
-        //        .AsNoTracking()
-        //        .Where(j => rankedIds.Contains(j.Id))
-        //        .Select(j => new JobCardDto
-        //        {
-        //            Id = j.Id,
-        //            Title = j.Title,
-        //            Description = j.Description,
-        //            CompanyName = j.Employer.ComapnyName,
-        //            CompanyLogoUrl = j.Employer.LogoUrl,
-        //            Category = j.Category.Name,
-        //            JobType = j.JobType.Name,
-        //            LocationType = j.JobLocationType.Name,
-        //            Country = j.Address != null && j.Address.Country != null ? j.Address.Country.Name : null,
-        //            Governate = j.Address != null && j.Address.Governate != null ? j.Address.Governate.Name : null,
-        //            MinSalary = j.MinSalary,
-        //            MaxSalary = j.MaxSalary,
-        //            PostedDate = j.PostedDate
-        //        })
-        //        .ToListAsync();
-
-        //    // 7. Re-sort to preserve AI ranked order
-        //    responseDto.Recommendations = rankedIds
-        //        .Select(id => enriched.FirstOrDefault(j => j.Id == id))
-        //        .Where(j => j != null)
-        //        .Cast<JobCardDto>()
-        //        .ToList();
-
-        //    foreach (var recommendation in responseDto.Recommendations)
-        //    {
-        //        if (!string.IsNullOrWhiteSpace(recommendation.CompanyLogoUrl))
-        //        {
-        //            recommendation.CompanyLogoUrl = _fileService.DownloadUrlAsync(recommendation.CompanyLogoUrl)?.SasUrl;
-        //        }
-        //    }
-
-        //    return new ApiResponse<JobRecommendationResultDto>(200, responseDto);
-        //}
 
         // ==================== Job Applications ====================
 
@@ -853,64 +655,6 @@ namespace GoWork.Services.JobService
                 return new ApiResponse<JobDescriptionEnhancementResultDTO>(500, "An error occurred while communicating with the AI service.");
             }
         }
-
-        //private async Task<int> CalculateMatchScoreAsync(Seeker seeker, Job job)
-        //{
-        //    var apiKey = _configuration["OpenAI:ApiKey"];
-        //    if (string.IsNullOrWhiteSpace(apiKey)) return 10; // Default to pass if AI not configured
-
-        //    try
-        //    {
-        //        var candidateProfile = new
-        //        {
-        //            skills = seeker.SeekerSkills?.Select(ss => ss.Skill.Name).ToList() ?? new List<string>(),
-        //            major = seeker.Major ?? "Not specified"
-        //        };
-
-        //        var jobRequirements = new
-        //        {
-        //            title = job.Title,
-        //            description = job.Description,
-        //            required_skills = job.JobSkills?.Select(js => js.Skill.Name).ToList() ?? new List<string>()
-        //        };
-
-        //        var prompt = $@"
-        //        You are an expert AI recruiter. Evaluate the matching between the candidate and the job requirements.
-        //        Candidate Data: {JsonSerializer.Serialize(candidateProfile)}
-        //        Job Data: {JsonSerializer.Serialize(jobRequirements)}
-
-        //        Instructions:
-        //        1. Provide a match score from 1 to 10 (integer).
-        //        2. Return ONLY a valid JSON object with a 'score' field, without any explanations or additional text, in this exact format:
-        //        {{ ""score"": 7 }}
-        //        3. Do not include any explanations, markdown formatting, or text outside the JSON.";
-
-        //        var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
-        //        var chatClient = new ChatClient(modelName, apiKey);
-
-        //        var options = new ChatCompletionOptions
-        //        {
-        //            Temperature = 0.2f,
-        //            ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat()
-        //        };
-
-        //        var completion = await chatClient.CompleteChatAsync(new ChatMessage[] { new SystemChatMessage(prompt) }, options);
-        //        var aiContent = completion.Value.Content[0].Text;
-
-        //        using var doc = JsonDocument.Parse(aiContent);
-        //        if (doc.RootElement.TryGetProperty("score", out var scoreElement))
-        //        {
-        //            return scoreElement.GetInt32();
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"AI Matching Failed: {ex.Message}");
-        //    }
-
-        //    return 10; // Fallback to pass to avoid blocking users on technical errors
-        //}
-
 
         public async Task<ApiResponse<PaginatedResult<JobApplicantDTO>>> GetJobApplicantsAsync(
             int employerId, int jobId, CompanyApplicationsRequestDTO request)
@@ -1107,11 +851,14 @@ namespace GoWork.Services.JobService
 
         public async Task<ApiResponse<ApplicationResultDto>> ApplyToJobAsync(int jobId, int seekerId)
         {
-            var job = await _context.TbJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == jobId);
-
-            //var job = await _context.TbJobs
-            //    .Include(j => j.JobSkills).ThenInclude(js => js.Skill)
-            //    .FirstOrDefaultAsync(j => j.Id == jobId);
+            var job = await _context.TbJobs.AsNoTracking()
+                .Select(j => new
+                {
+                    j.Id,
+                    j.JobStatusId,
+                    j.ExpirationDate
+                })
+                .FirstOrDefaultAsync(j => j.Id == jobId);
 
             if (job == null)
             {
@@ -1129,18 +876,9 @@ namespace GoWork.Services.JobService
                 return new ApiResponse<ApplicationResultDto>(404, "Candidate not found.");
             }
 
-            //var seeker = await _context.TbSeekers
-            //   .Include(s => s.SeekerSkills).ThenInclude(ss => ss.Skill)
-            //   .FirstOrDefaultAsync(s => s.Id == seekerId);
-
-            //if (seeker == null)
-            //{
-            //    return new ApiResponse<ApplicationResultDto>(404, "Candidate not found.");
-            //}
-
-            var alreadyApplied = await _context.TbApplications.AnyAsync(a => a.JobId == jobId && a.SeekerId == seekerId && 
-            a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview && a.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted &&
-            a.ApplicationStatusId == (int)ApplicationStatusEnum.Hired && a.ApplicationStatusId == (int)ApplicationStatusEnum.Interviewed);
+            var alreadyApplied = await _context.TbApplications.AnyAsync(a => (a.JobId == jobId && a.SeekerId == seekerId) && ( 
+            a.ApplicationStatusId == (int)ApplicationStatusEnum.PendingReview || a.ApplicationStatusId == (int)ApplicationStatusEnum.Shortlisted ||
+            a.ApplicationStatusId == (int)ApplicationStatusEnum.Hired || a.ApplicationStatusId == (int)ApplicationStatusEnum.Interviewed));
             if (alreadyApplied)
             {
                 return new ApiResponse<ApplicationResultDto>(400, "You have already applied for this job.");
@@ -1163,7 +901,6 @@ namespace GoWork.Services.JobService
             {
                 ApplicationId = application.Id,
                 Message = "Application submitted successfully."
-                //Message = message
             };
 
             return new ApiResponse<ApplicationResultDto>(200, result);
@@ -1200,7 +937,7 @@ namespace GoWork.Services.JobService
                             LogoUrl = j.Employer.LogoUrl
                         }
                     },
-                    JobStatusId = j.JobStatusId
+                    j.JobStatusId
                 })
                 .FirstOrDefaultAsync();
 
