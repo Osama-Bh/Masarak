@@ -739,6 +739,8 @@ namespace GoWork.Services.JobService
                 if (string.IsNullOrWhiteSpace(apiKey)) return null;
 
                 var modelName = _configuration["OpenAI:Model"] ?? "gpt-4o-mini";
+                // this is a stronger model than the above 
+                //var modelName = "gpt-5.4-mini-2026-03-17";
                 var chatClient = new ChatClient(modelName, apiKey);
 
                 //var prompt = $@"
